@@ -3,6 +3,25 @@
 Working list for the Pump Monitor node. Numbers below are first guesses —
 revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 
+## Definitions
+
+- **BEP — Best Efficiency Point**: the flow rate on a pump's H-Q curve where
+  it converts the most input (electrical/shaft) power into useful water power
+  — i.e. peak pump efficiency. Running far from BEP wastes energy; the far
+  extremes also stress the pump (recirculation/cavitation at very low flow,
+  motor overload at very high flow). For this Goulds 3656 the published BEP
+  is ~73% efficiency at ~100 GPM.
+- **TDH — Total Dynamic Head**: the total pressure the pump develops,
+  expressed in feet of water (1 psi ≈ 2.31 ft). At the gauge here, TDH ≈
+  (gauge psi − ~5 psi flooded-suction boost) × 2.31.
+- **Shutoff / dead-head**: zero-flow condition — all outlets closed. The
+  pump makes its maximum pressure but no flow, so it just heats the trapped
+  water (dangerous for a running pump; hence the ICE high-pressure trip).
+- **ICE — In-Case-of-Emergency**: the pump-protection relay layer (see the
+  ICE sections below and the README).
+- **WHP — Water HorsePower**: hydraulic output power = GPM × TDH(ft) ÷ 3960.
+- **COID — Central Oregon Irrigation District**: the water supplier.
+
 ## 1. Staged pressure response (the real control system) — NOT YET
 
 Today the ICE layer is a plain threshold: ≥ High Trip (95 psi) for 3 s →
@@ -15,7 +34,7 @@ Zones (on `Pump Pressure`):
 
 | Zone | Condition | Response |
 |---|---|---|
-| **Green** | ~48–62 psi at the gauge (BEP ≈ 57; below ~46 the 5 HP motor is at full load — overload territory; above ~62 flow is dropping toward dead-head at ~70) | nothing |
+| **Green** | ~48–62 psi at the gauge (BEP = best efficiency point, ≈ 57; below ~46 the 5 HP motor is at full load — overload territory; above ~62 flow is dropping toward dead-head at ~70) | nothing |
 | **Yellow** | > ~62 psi (or < ~48) | Valve 1 opens in steps (Pulse +) until pressure is back in band; when Valve 1 reaches 100%, Valve 2 starts opening the same way. Low side: pressure < ~48 means flow > ~140 GPM — motor near full load — so the response there is to CLOSE recycle, not open |
 | **Red** | > ~64 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
 | **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
