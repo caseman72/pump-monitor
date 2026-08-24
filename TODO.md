@@ -51,20 +51,39 @@ exactly how zone 1 relates to line 1.
 
 ### Base pressure per irrigation line
 
-Head counts per line, corrected 2026-08-24 from the field sketch
-(`docs/fields.md`: fields C/D/E, line 1 at the top): 1 = 6+8+2 = **16**,
-2 = 6+7+3 = **16**, 3 = 6+7+4 = **17**, 4 = 6+8+5 = **19** (Casey will
-confirm during the line tests). More heads = more flow = lower pressure.
-Rotation **3 → 1 → 4 → 2**, one line at a time, never during a lawn cycle.
-Predictions re-based on the corrected counts: line 1 (16) = 51.7 measured
-→ ~7.8 GPM/head; line 2 (16) ≈ 51.7; line 3 (17) ≈ 51.0; line 4 (19) ≈ 49.5.
+Head counts confirmed by physical count + line tests 2026-08-24
+(`docs/fields.md`; nozzles are **5/32" Rainbird**): line 1 = 6+8+1+3 = **18**,
+line 2 = 6+8+4 = **18**, line 3 = 6+8+5 = **19**, line 4 = 6+8+1+6 = **21**.
 
-| Line | Heads | Base psi | Date | Notes / prediction |
-|---|---:|---:|---|---|
-| line 1 | 16 | 51.5–51.7 | 2026-08-23/24 | steady; ≈125 GPM on the curve (right of BEP). 51.7 re-confirmed 2026-08-24 05:30–05:50 and 06:20–07:27 |
-| line 2 | 16 | _pending_ | | predict ≈ line 1 (~51.7) |
-| line 3 | 17 | _pending_ | | predict ~51.0 (re-based on 17 heads). (A 49.9 reading on 2026-08-24 08:18 was mislogged as line 3 — it was lawn zone 3 on line 1, which happens to read the same. Retracted. The dial's ~62 on 2026-08-19 was also wrong; ignore the dial.) |
-| line 4 | 19 | _pending_ | 2026-08-24 | predict ~49.5 (re-based on 19 heads); with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor — see maintenance history below for why there's margin here |
+**Measured base pressures (recorder + Casey's notes, 2026-08-24 11:00-11:45):**
+
+| Line | Heads | Base psi | Notes |
+|---|---:|---:|---|
+| line 1 | 18 | **51.4** | 11:00-11:12 |
+| line 2 | 18 | **51.7** | 11:13-11:17; "same as 1" — matches (same head count) |
+| line 3 | 19 | **51.4** | 11:19-11:36; read 52.2 with one head off, 51.4 with all 19 on |
+| line 4 | 21 | **50.3** | 11:38-11:45 |
+
+**KEY FINDING — the lines are nearly flat**: only ~1.4 psi spread across
+18→21 heads (51.4 / 51.7 / 51.4 / 50.3). The earlier pipe-count model
+predicted a much steeper psi-per-head slope; reality is far flatter because
+the pump sits near BEP (flattest part of the curve) and the 5/32" Rainbird
+nozzles flow less per head than the earlier ~7.8 GPM guess. Consequences for
+the controller:
+- The feedforward table barely needs a per-line term — all four lines are
+  within 1.4 psi. The recycle valves will mostly be trimming the *pump*
+  (season, wear, pond, temperature), not compensating line-to-line jumps.
+- Line 4 (21 heads) at 50.3 is the lowest — still well inside the control
+  band, nowhere near the ~46 psi motor-load floor. Two lines at once (the
+  ≤8-head-per-line goal) would land ~36-42 heads → meaningfully lower
+  pressure; that's the case the recycle system actually has to manage.
+
+**COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
+Deschutes River natural flows are dropping; COID is reducing deliveries to
+**~60% (fluctuating)** for patrons. Real operating constraint — less inflow
+to the pond, so the recycle-to-pond strategy has to account for a pond
+that may not refill as fast, and total irrigation may need to be rationed.
+Worth wiring pond level into HA eventually so the controller can see it.
 
 ### Pump maintenance history (for context on motor margin)
 

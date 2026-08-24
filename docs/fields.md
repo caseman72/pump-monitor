@@ -11,12 +11,15 @@ C, D and E are irrigated together as **four lines** that each run across all
 three fields (line 1 at the top of the fields, line 4 at the bottom). Field E
 tapers, so its lines carry fewer heads.
 
-| Line | Field C (240 × 250 ft) | Field D (220 × 200 ft) | Field E (230 ft) | Heads |
+| Line | Field C | Field D | Field E | Heads (verified 2026-08-24) |
 |---:|---:|---:|---:|---:|
-| 1 | 6 | 8 | 2 | **16** |
-| 2 | 6 | 7 | 3 | **16** |
-| 3 | 6 | 7 | 4 | **17** |
-| 4 | 6 | 8 | 5 | **19** |
+| 1 | 6 | 8 | 1+3 | **18** |
+| 2 | 6 | 8 | 4 | **18** |
+| 3 | 6 | 8 | 5 | **19** |
+| 4 | 6 | 8 | 1+6 | **21** |
+
+Nozzles: **5/32" Rainbird**. Counts above are physically verified
+(supersede the earlier sketch estimate of 16/16/17/19).
 
 Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 (morning normally; evenings when the schedule is flipped).
