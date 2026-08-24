@@ -122,10 +122,10 @@ the controller:
   - **Transducer offset unverified**: the whole calc rests on the ~51 psi
     reading. If it reads ~8 psi low (true ~59), head and efficiency both
     jump. Not yet checked against a reference (see the pump-off test below).
-  - **New pump packing** (replaced 2026, Casey): over-tight packing adds
-    shaft drag → higher input, lower apparent efficiency; the 2024 Sense
-    data used here predates the new packing, so the input was on the
-    pessimistic side too.
+  - **Pump packing** (replaced 2026, Casey): now at the standard ~1 drip/sec
+    (properly adjusted, not over-tight) → NOT a drag factor for current
+    efficiency. Only caveat: the 2024 Sense data predates it, so the old
+    packing's condition is an unknown in that historical input.
   Net: these push efficiency in both directions; plausibly ~50-65% =
   a healthy pump. **No wear conclusion — the estimate has too many
   unmeasured variables.** To actually measure it: simultaneous
@@ -156,9 +156,12 @@ Worth wiring pond level into HA eventually so the controller can see it.
 Two separate events, not one visit — corrected 2026-08-24 after conflating
 them:
 
-- **Pump packing replaced** (2026, Casey) — fresh packing; note
-  over-tight packing adds shaft drag (parasitic input power). Relevant to
-  any efficiency estimate from pre-2026 power data.
+- **Pump packing replaced** (2026, Casey) — new, and adjusted to the
+  standard **~1 drip/sec** at the gland (proper shaft lube/cooling, NOT
+  over-tight). So packing is a non-factor for current efficiency: no
+  parasitic drag, and the drip is negligible flow (~0.0008 GPM). The 2024
+  Sense power data predates it, so what the OLD packing was doing is
+  unknown — the only reason it's noted here.
 - **Overload heaters upsized** — self-installed by Casey, sized from the
   motor's known amp draw; the pump guy approved the sizing. Fixed
   occasional drops at the high-flow end (consistent with the curve — line
