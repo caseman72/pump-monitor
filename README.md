@@ -151,19 +151,23 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
   is the mode switch:
   - **ON = bypass**: loop held closed unconditionally (work on the board,
     reboot, swap a valve). Default; remembered across reboots.
-  - **OFF = automation armed**: loop still closed; opened only when pressure
-    is ≥ **ICE High Trip** (default 95 psi, sustained 3 s) or on the **ICE
-    Low Trip** (default 20 psi, matching the Furnas; 0 disables). The low
-    trip mirrors the Furnas lever: the relay is closed at rest so a lever
-    start works, it arms once pressure has exceeded Low Trip, and 5 s back
-    at/below it trips. It is the primary broken-line protection — faster
-    than the Furnas and long before the starter's thermal overloads.
-  - **After a trip**: the loop opens; once the pump is confirmed stopped
-    (< 10 psi for 30 s) the loop **re-closes automatically** so a manual
-    restart at the pump house works without HA. The alert (**ICE Tripped**,
-    reason in **ICE Status**) stays latched until **ICE Reset**; if the
-    cause persists, the restart just trips again. A sensor fault
-    (transducer voltage outside 0.7–5.3 V) never trips.
+  - **OFF = automation armed**: the relay is a debounced comparator with
+    hysteresis, like the Furnas itself — **closed while Low Trip < pressure
+    < High Trip**, open otherwise. 5 s at/below Low Trip (default 20 psi,
+    matching the Furnas; 0 disables) or 3 s at/above High Trip (default
+    95 psi) opens it; 2 s back inside the band re-closes it. Every opening
+    latches an alert (**ICE Tripped**, reason in **ICE Status**) until
+    **ICE Reset** — the alert is the record, the loop state just follows
+    pressure. A sensor fault (transducer outside 0.7–5.3 V) holds the
+    current state and never opens the loop.
+  - **Starting the pump**: the starter is HAND–OFF–AUTO. Start in HAND
+    (circuit bypassed); once at pressure the relay is already closed, so
+    flipping through OFF to AUTO hands the pump to the circuit. The blip
+    through OFF doesn't trip anything — pressure stays above 20.
+  - **After a trip**: pump stops, pressure decays, loop stays open (status
+    shows it). Restart in HAND; as pressure passes Low Trip the relay
+    re-closes on its own; flip to AUTO. If the cause persists it simply
+    trips again.
   - **ICE Test Mode**: the trip logic runs and reports "TEST: would trip …"
     in ICE Status but never actuates the relay — lower the High Trip and
     close the main valve slowly to prove it with zero risk.

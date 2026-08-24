@@ -529,8 +529,8 @@ button:
           id(v2_pulse_target) = t;
       - script.execute: v2_pulse_go
 
-  # Clears a latched trip (real or test) and re-closes the loop. The pump
-  # still needs its manual restart afterwards.
+  # Clears the latched alerts (real or test). The loop itself follows
+  # pressure; a manual restart re-closes it as pressure passes Low Trip.
   - platform: template
     name: "ICE Reset"
     icon: "mdi:restart-alert"
@@ -587,10 +587,11 @@ number:
     entity_category: config
     mode: box
 
-  # ICE trip setpoints. High: sustained 3 s at/above -> trip. Low: 0 disables;
-  # otherwise mirrors the Furnas (set to 20 psi): closed at rest so a lever
-  # start works, arms once pressure exceeds Low Trip, trips after 5 s back
-  # at/below it. Pump -> Furnas -> Relay in series in the 120 VAC starter loop.
+  # ICE band: relay closed while Low Trip < p < High Trip. Below low for
+  # 5 s or above high for 3 s opens it; back in band for 2 s re-closes it.
+  # Low Trip 20 psi matches the Furnas; 0 disables the low side.
+  # Pump -> Furnas -> Relay in series in the 120 VAC starter loop; the
+  # starter's MANUAL position bypasses the circuit for starting.
   - platform: template
     name: "ICE High Trip"
     id: ice_high_trip
@@ -1026,15 +1027,16 @@ text_sensor:
       entity_category: diagnostic
 
 interval:
-  # ICE evaluation, once a second.
+  # ICE evaluation, once a second. Plain comparator with hysteresis, like
+  # the Furnas itself: the relay is CLOSED while Low Trip < p < High Trip
+  # and OPEN otherwise (debounced). Starting is done with the starter in
+  # MANUAL (circuit bypassed); once at pressure the relay is already closed
+  # and the starter is flipped to AUTO. Alerts latch until ICE Reset.
   - interval: 1s
     then:
       - lambda: |-
           auto set_status = [&](const std::string &x) {
             if (id(ice_status).state != x) id(ice_status).publish_state(x);
-          };
-          auto reset_counts = [&]() {
-            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_start_count) = 0;
           };
           float v = id(pressure_volts).state;
           float p = id(pump_pressure).state;
@@ -1042,84 +1044,71 @@ interval:
           bool running = sensor_ok && p > 10.0f;
           float hi = id(ice_high_trip).state;
           float lo = id(ice_low_trip).state;
-
-          // Pump start/stop edges drive the low-trip arming.
-          if (running && !id(ice_pump_was_running)) { id(ice_low_armed) = false; id(ice_start_count) = 0; }
-          if (!running) id(ice_low_armed) = false;
-          id(ice_pump_was_running) = running;
+          std::string latched = id(ice_tripped) ? " - alert latched: " + id(ice_trip_reason) + " (ICE Reset to clear)" : "";
 
           if (id(ice_bypass).state) {
-            reset_counts();
-            set_status(id(ice_tripped) ? "BYPASS (trip latched: " + id(ice_trip_reason) + ")" : "BYPASS");
+            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_start_count) = 0;
+            set_status("BYPASS (loop held closed)" + latched);
+            return;
+          }
+          if (!sensor_ok) {
+            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_start_count) = 0;
+            set_status(std::string("SENSOR FAULT - holding loop ") + (id(ice_loop_open) ? "OPEN" : "CLOSED") + latched);
             return;
           }
 
-          // ---- Loop commanded OPEN by a trip: verify, then re-close once
-          // the pump is confirmed stopped so a manual restart can work. ----
-          if (id(ice_loop_open)) {
+          bool too_high = p >= hi;
+          bool too_low  = lo > 0.5f && p <= lo;
+          id(ice_high_count) = too_high ? id(ice_high_count) + 1 : 0;
+          id(ice_low_count)  = too_low  ? id(ice_low_count)  + 1 : 0;
+          // ice_start_count doubles as the "back in band" debounce
+          id(ice_start_count) = (!too_high && !too_low) ? id(ice_start_count) + 1 : 0;
+
+          const char *why = nullptr;
+          if (id(ice_high_count) >= 3) why = "HIGH";
+          else if (id(ice_low_count) >= 5) why = "LOW";
+
+          if (!id(ice_loop_open)) {
+            if (why != nullptr) {
+              char buf[64];
+              snprintf(buf, sizeof(buf), "%s at %.1f psi", why, p);
+              if (id(ice_test_mode).state) {
+                id(ice_test_latched) = std::string("TEST: would open loop - ") + buf;
+                ESP_LOGW("ice", "%s", id(ice_test_latched).c_str());
+                id(ice_high_count) = 0; id(ice_low_count) = 0;
+              } else {
+                id(ice_loop_open) = true;
+                id(ice_tripped) = true;
+                id(ice_trip_reason) = buf;
+                id(ice_live_count) = 0;
+                ESP_LOGE("ice", "TRIP %s - opening pump loop", buf);
+                id(ice_apply).execute();
+                set_status(std::string("TRIPPED ") + buf + " (loop open)");
+                return;
+              }
+            }
+          } else {
+            // Loop open. Verify the trip took (pressure is the feedback),
+            // and re-close once pressure is back inside the band.
             if (running) {
-              id(ice_stopped_count) = 0;
               if (++id(ice_live_count) >= 120 && !id(ice_trip_failed)) {
                 id(ice_trip_failed) = true;
                 ESP_LOGE("ice", "TRIP FAILED - pump still running 120 s after trip; check relay / swap selector");
               }
             } else {
               id(ice_live_count) = 0;
-              if (++id(ice_stopped_count) >= 30) {
-                id(ice_loop_open) = false;
-                id(ice_stopped_count) = 0;
-                ESP_LOGW("ice", "Pump confirmed stopped - loop re-closed for manual restart (trip still latched: %s)", id(ice_trip_reason).c_str());
-                id(ice_apply).execute();
-              }
             }
-            if (id(ice_trip_failed))
-              set_status("TRIP FAILED - pump still running after " + id(ice_trip_reason) + " - check relay / swap selector");
-            else
-              set_status("TRIPPED " + id(ice_trip_reason) + (running ? " (loop open, pump still running)" : " (loop open, pump stopping)"));
-            return;
-          }
-
-          if (!sensor_ok) {
-            reset_counts();
-            set_status(id(ice_tripped) ? "SENSOR FAULT - not tripping (trip latched)" : "SENSOR FAULT - not tripping");
-            return;
-          }
-
-          // ---- Armed evaluation (loop closed) ----
-          const char *why = nullptr;
-          id(ice_high_count) = (p >= hi) ? id(ice_high_count) + 1 : 0;
-          if (id(ice_high_count) >= 3) why = "HIGH";
-
-          // Low trip mirrors the Furnas lever: relay closed at rest so a
-          // lever start works; once pressure has been above Low Trip it is
-          // armed, and falling back below it (5 s debounce) trips.
-          if (lo > 0.5f && running) {
-            if (!id(ice_low_armed)) {
-              if (p > lo) id(ice_low_armed) = true;
-            } else {
-              id(ice_low_count) = (p <= lo) ? id(ice_low_count) + 1 : 0;
-              if (id(ice_low_count) >= 5) why = "LOW";
-            }
-          } else {
-            id(ice_low_count) = 0;
-          }
-
-          if (why != nullptr) {
-            char buf[80];
-            snprintf(buf, sizeof(buf), "%s at %.1f psi", why, p);
-            if (id(ice_test_mode).state) {
-              id(ice_test_latched) = std::string("TEST: would trip ") + buf;
-              ESP_LOGW("ice", "%s", id(ice_test_latched).c_str());
-              reset_counts();
-            } else {
-              id(ice_tripped) = true;
-              id(ice_loop_open) = true;
-              id(ice_trip_reason) = buf;
+            if (id(ice_start_count) >= 2) {
+              id(ice_loop_open) = false;
               id(ice_live_count) = 0;
-              id(ice_stopped_count) = 0;
-              ESP_LOGE("ice", "TRIP %s - opening pump loop", buf);
+              ESP_LOGW("ice", "Pressure back in band (%.1f psi) - loop re-closed%s", p,
+                       id(ice_tripped) ? " (alert still latched)" : "");
               id(ice_apply).execute();
-              set_status("TRIPPED " + id(ice_trip_reason) + " (loop open)");
+            } else {
+              if (id(ice_trip_failed))
+                set_status("TRIP FAILED - pump still running after " + id(ice_trip_reason) + " - check relay / swap selector");
+              else
+                set_status("LOOP OPEN - " + id(ice_trip_reason) + (running ? " (pump still running)" : " (pump stopped; re-closes when pressure > " + std::to_string((int) lo) + " psi)"));
               return;
             }
           }
@@ -1127,10 +1116,8 @@ interval:
           std::string st;
           if (!id(ice_test_latched).empty()) st = id(ice_test_latched);
           else if (!running) st = "ARMED (pump stopped)";
-          else if (lo > 0.5f && !id(ice_low_armed)) st = "ARMED (low trip arms above " + std::to_string((int) lo) + " psi)";
-          else st = "ARMED";
-          if (id(ice_tripped)) st += " - trip latched: " + id(ice_trip_reason) + " (ICE Reset to clear)";
-          set_status(st);
+          else st = "ARMED (loop closed)";
+          set_status(st + latched);
 
   - interval: 100ms
     then:

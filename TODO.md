@@ -79,15 +79,14 @@ exactly how zone 1 relates to line 1.
       by the local pca9554 override (2026-08-23) — verify on the bench:
       the module's relay LED must stay lit through a Restart.
 - [x] Furnas Class 69 pressure control (auto-off lever): low-pressure
-      cutoff **20 psi**, manual lever restart. Loop is **Pump → Furnas →
+      cutoff **20 psi**. Loop is **Pump → Furnas →
       ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
       Trip = 20 psi to match. High cut-out setting still to confirm so the
       ICE High Trip is known to sit above it.
-- [x] Low Trip mirrors the Furnas: relay closed at rest (lever start
-      works), arms above 20 psi, trips 5 s at/below 20. No start window.
-      After any trip the loop re-closes automatically once the pump is
-      confirmed stopped, so the lever restart works; the alert stays
-      latched until ICE Reset.
+- [x] ICE relay = debounced comparator with hysteresis (closed while
+      20 < p < 95; 5 s low / 3 s high opens, 2 s in-band re-closes), the
+      same behaviour as the Furnas. Starter is HAND–OFF–AUTO: start in HAND,
+      flip to AUTO at pressure. Alerts latch until ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
 
