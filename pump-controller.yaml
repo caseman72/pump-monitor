@@ -4,7 +4,7 @@
 # the ESPHome native sprinkler component.
 #
 # Two controllers on the one board (docs/sprinkler-component-notes.md):
-#   Lawn controller  - the 2 pump-house lawn zones, REL1/REL2.
+#   Pump Lawn controller  - the 2 pump-house lawn zones, REL1/REL2.
 #     valve_open_delay > 0: current zone turns OFF, gap, next turns ON.
 #     (These are the dead-head stress-test zones per the roadmap - open,
 #      close, open, close, off - so a clean gap between them is what we want.)
@@ -60,9 +60,9 @@ ota:
 logger:
   level: INFO
 
-i2c:
-  sda: 6
-  scl: 7
+i2c:   # REQUIRED - this is the bus the PCA9557 relay expander lives
+  sda: 6   # on (every zone relay is driven through it). NOT a temp-sensor
+  scl: 7   # bus - do not remove.
   scan: true
 
 pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
@@ -107,13 +107,13 @@ switch:
 sprinkler:
   # --- Pump-house lawn: gap between zones (off, then on) ---
   - id: lawn_controller
-    main_switch: "Lawn"
-    auto_advance_switch: "Lawn Auto Advance"
+    main_switch: "Pump Lawn"
+    auto_advance_switch: "Pump Lawn Auto Advance"
     valve_open_delay: 5s
     valves:
-      - valve_switch: "Lawn Zone 1"
+      - valve_switch: "Pump Lawn Zone 1"
         run_duration_number:
-          name: "Lawn Zone 1 Duration"
+          name: "Pump Lawn Zone 1 Duration"
           initial_value: 15
           min_value: 1
           max_value: 180
@@ -121,9 +121,9 @@ sprinkler:
           unit_of_measurement: min
           restore_value: true
         valve_switch_id: rel_lawn1
-      - valve_switch: "Lawn Zone 2"
+      - valve_switch: "Pump Lawn Zone 2"
         run_duration_number:
-          name: "Lawn Zone 2 Duration"
+          name: "Pump Lawn Zone 2 Duration"
           initial_value: 15
           min_value: 1
           max_value: 180
@@ -133,17 +133,17 @@ sprinkler:
         valve_switch_id: rel_lawn2
 
   # --- Field A: overlap so a line is never fully off (NOT wired yet) ---
-  - id: fielda_controller
+  - id: field_a_controller
     main_switch: "Field A"
     auto_advance_switch: "Field A Auto Advance"
-    valve_overlap: 5s
+    valve_overlap: 15s
     valves:
       - valve_switch: "Field A Zone 1"
         run_duration_number:
           name: "Field A Zone 1 Duration"
-          initial_value: 15
+          initial_value: 60
           min_value: 1
-          max_value: 180
+          max_value: 360
           step: 1
           unit_of_measurement: min
           restore_value: true
@@ -151,9 +151,9 @@ sprinkler:
       - valve_switch: "Field A Zone 2"
         run_duration_number:
           name: "Field A Zone 2 Duration"
-          initial_value: 15
+          initial_value: 60
           min_value: 1
-          max_value: 180
+          max_value: 360
           step: 1
           unit_of_measurement: min
           restore_value: true
@@ -161,9 +161,9 @@ sprinkler:
       - valve_switch: "Field A Zone 3"
         run_duration_number:
           name: "Field A Zone 3 Duration"
-          initial_value: 15
+          initial_value: 60
           min_value: 1
-          max_value: 180
+          max_value: 360
           step: 1
           unit_of_measurement: min
           restore_value: true
@@ -171,9 +171,9 @@ sprinkler:
       - valve_switch: "Field A Zone 4"
         run_duration_number:
           name: "Field A Zone 4 Duration"
-          initial_value: 15
+          initial_value: 60
           min_value: 1
-          max_value: 180
+          max_value: 360
           step: 1
           unit_of_measurement: min
           restore_value: true
