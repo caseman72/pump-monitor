@@ -1,8 +1,9 @@
 # Irrigation field layout
 
-Source: Casey's hand sketch (`irrigation fields.pdf`, dimensions from Google
+Source: Casey's hand sketch (`images/irrigation fields.pdf`, local only; dimensions from Google
 Maps — accurate for distance; some lines will move for better spacing when
-the underground system goes in). Head counts per line/zone as sketched.
+the underground system goes in). Head counts per line/zone as sketched — **to be verified by physically
+counting each line** (should be close).
 
 ## Fields C, D, E — the four current "lines"
 

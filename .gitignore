@@ -19,3 +19,6 @@ secrets.h
 .DS_Store
 
 *.bak.*
+
+# Local sketches, satellite photos, field imagery (not backed up to GitHub)
+images/
