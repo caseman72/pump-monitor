@@ -133,12 +133,24 @@ Findings:
   drift) sits on top of the four lines to reverse-engineer "this watt value
   = this line" from history — **today's/tomorrow's live per-line readings
   are the trustworthy source for that mapping, not this archive.**
-- **Real finding — year-over-year upward drift** on the same pump, same
-  lines: median steady-state power 2022 → 2023 → 2024 = **4429 → 4583 →
-  4657 W** (+228 W / +5% over 2 years). Consistent with impeller wear or
-  pipe fouling raising the system friction curve. Worth tracking in 2025+:
-  a continuing climb would be an early wear signal worth acting on before
-  failure.
+- **Real finding — year-over-year upward drift**, but the first pass at
+  this (whole-season 2022 vs 2023 vs 2024 averages) was invalid: 2022 only
+  has Sep–Oct data (32 days) while 2023/2024 are May–Oct, so it was
+  comparing different seasons, not different years. Caught by Casey
+  2026-08-24 (compared against the real Sense chart) — redone matched by
+  calendar month:
+  - **Sep, same month 3 years running: 4346 → 4452 → 4640 W (+294 W /
+    +6.8% over 2 years)** — the drift survives, and is sharper than the
+    original mixed-season estimate.
+  - Oct: 4499 → 4407 → 4617 (2023 n=3, too thin to trust)
+  - May–Aug, 2023 vs 2024 only: 4592 → 4673 W (+81 W / +1.8%)
+  - Within a season the pattern runs the OPPOSITE of the pond-level theory
+    that motivated checking this: power is higher in spring, lower by
+    fall, in both 2023 and 2024 — so the original seasonal explanation was
+    also wrong, even though the year-over-year direction happened to hold.
+  Consistent with impeller wear or pipe fouling raising the system
+  friction curve. Worth tracking in 2025+: a continuing climb would be an
+  early wear signal worth acting on before failure.
 - One anomaly day (2024-09-11) shows two mid-day power steps instead of the
   usual single AM/PM split — a one-off event, not a mapping error.
 
