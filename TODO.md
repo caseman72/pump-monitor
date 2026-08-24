@@ -78,6 +78,24 @@ curve slope near the operating point (~0.2–0.25 psi per GPM).
 | zone 3 | 49.8 | −1.7 | 2026-08-23 (≈ +7 GPM) |
 | zone 4 | 51.1 | −0.4 | 2026-08-23 (≈ +2 GPM, drip/tips; or baseline drift) |
 
+### Motor load via Sense (whole-house energy monitor)
+
+Clamping the leads means opening the panel, so use Sense instead: pump
+OFF → note the house baseline; run each line with big loads (microwave
+etc.) off → the delta is the pump's input power. Nameplate full load ≈
+23.1 A × 230 V × 0.92 PF ≈ **4.9 kW** (amps ≈ W ÷ 212).
+
+| Running | Predicted input | Motor load |
+|---|---:|---:|
+| 13 heads (BEP) | ~4.1 kW | ~83% |
+| 16 heads | ~4.4 kW | ~90% |
+| line 1 (17) | ~4.5–4.6 kW | ~93% |
+| line 3 (19) | ~4.75 kW | ~97% |
+| line 4 (21) | ~4.9 kW | ~100% |
+| line 4 + lawn zone 1 | ~5.1–5.2 kW | into 1.15 SF |
+
+Measured: _pending_
+
 ### Pump zones (mornings)
 
 | Pump zone | psi observed | Delta vs line base | Date |
