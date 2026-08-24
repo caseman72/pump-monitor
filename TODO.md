@@ -18,7 +18,7 @@ Zones (on `Pump Pressure`):
 | **Green** | 30–60 psi | nothing |
 | **Yellow** | > 60 psi (or < 30) | Valve 1 opens in steps (Pulse +) until pressure is back below 60; when Valve 1 reaches 100%, Valve 2 starts opening the same way |
 | **Red** | > 70 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
-| **DEFCON 1** | > 80 psi, both valves 100%, and > 70 psi for over 1 min | cut power to the pump (ICE trip, latched) |
+| **DEFCON 1** | > 80 psi, both valves 100%, and > 70 psi for over 1 min | cut power to the pump (ICE trip, latched). Interim: the flat 80 psi ICE High Trip is live today |
 
 Design notes:
 - Valve response uses the pulse primitive (no re-home transient); the
@@ -81,11 +81,13 @@ exactly how zone 1 relates to line 1.
 - [x] Furnas Class 69 pressure control (auto-off lever): low-pressure
       cutoff **20 psi**. Loop is **Pump → Furnas →
       ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
-      Trip disabled (0) — the ICE guards the high side only. High cut-out setting still to confirm so the
-      ICE High Trip is known to sit above it.
+      Trip disabled (0) — the ICE guards the high side only. The Furnas has NO high setting — the ICE is the pump's only
+      high-pressure protection. High Trip set to 80 psi (2026-08-23).
 - [x] ICE relay = debounced comparator with hysteresis, HIGH side only
       (Low Trip 0 = disabled; low pressure is the Furnas's job): opens after
-      3 s ≥ 95 psi, re-closes after 2 s back in band. Starter is HAND–OFF–AUTO: start in HAND,
+      3 s ≥ 80 psi, re-closes after 2 s back in band.
+- [ ] Confirm the pump's shutoff head (nameplate max head ÷ 2.31 = psi):
+      High Trip must be BELOW it or a dead-head can never trip the ICE. Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.

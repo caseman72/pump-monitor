@@ -589,6 +589,10 @@ number:
 
   # ICE band: relay closed while Low Trip < p < High Trip. Below low for
   # 5 s or above high for 3 s opens it; back in band for 2 s re-closes it.
+  # The ICE is the ONLY high-pressure protection: the Furnas only does low,
+  # and a dead-headed centrifugal pump draws LESS current so the thermal
+  # overloads never see it. High Trip must sit BELOW the pump's shutoff
+  # head (80 psi default; normal running is ~47-52).
   # Low Trip defaults to 0 = DISABLED: the ICE is the HIGH-pressure guard;
   # low pressure is the Furnas's job (20 psi) with the starter's thermal
   # overloads behind it - no second device arguing about low pressure.
@@ -603,7 +607,7 @@ number:
     min_value: 30
     max_value: 120
     step: 1
-    initial_value: 95
+    initial_value: 80
     optimistic: true
     restore_value: true
     mode: box

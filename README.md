@@ -17,7 +17,7 @@ an incremental **Pulse Position** for fine trims.
 | Valve 2 | REL3 (close) / REL4 (open) — PCA9557 IO3/IO4 |
 | Pump ICE enable | REL5 or REL6 (selectable) → external Songle 2-relay module, NO contact in line with pump control wiring |
 | Pressure | 1–5 V ratiometric transducer, 0–100 psi, on AI1 (GPIO0, ~3:1 divider). Calibrated to the transducer spec (dial gauge read ~8 psi higher; transducer trusted — absolute psi is a reference, the trace shape is what matters) |
-| Pump switch | Furnas Class 69 pressure control with auto-off lever, in the 120 VAC starter loop: **Pump → Furnas → ICE relay** in series. Low-pressure cutoff 20 psi handles low pressure (with the starter's thermal overloads behind it); the ICE guards the high side only |
+| Pump switch | Furnas Class 69 pressure control with auto-off lever, in the 120 VAC starter loop: **Pump → Furnas → ICE relay** in series. Low-pressure cutoff 20 psi handles low pressure (with the starter's thermal overloads behind it). It has no high setting — the ICE is the only high-pressure guard |
 | Relays | PCA9557 I2C expander @ 0x1A → ULN2003 (IO1..IO6; IO0 unused) |
 | I2C | SDA=GPIO6, SCL=GPIO7 (DS3231 RTC @ 0x68 shares the bus) |
 | Valves | 1/2" SS motorized ball valve, ~3.55 s travel, internal end-stop switches |
@@ -153,8 +153,11 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: the relay is a debounced comparator with
     hysteresis, like the Furnas itself — **closed while Low Trip < pressure
-    < High Trip**, open otherwise. 3 s at/above High Trip (default 95 psi)
-    opens it — the ICE is the **high-pressure guard**; Low Trip defaults to
+    < High Trip**, open otherwise. 3 s at/above High Trip (default 80 psi)
+    opens it — the ICE is the pump's **only high-pressure protection**: the
+    Furnas only does low, and a dead-headed centrifugal pump draws *less*
+    current, so the thermal overloads never see it. High Trip must sit
+    below the pump's shutoff head; Low Trip defaults to
     **0 = disabled** because low pressure is the Furnas's job (20 psi) with
     the starter's thermal overloads behind it. (Set Low Trip > 0 to add a
     5 s low-side trip.) Then 2 s back inside the band re-closes it. Every opening
