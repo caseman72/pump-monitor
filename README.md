@@ -17,7 +17,7 @@ an incremental **Pulse Position** for fine trims.
 | Valve 2 | REL3 (close) / REL4 (open) — PCA9557 IO3/IO4 |
 | Pump ICE enable | REL5 or REL6 (selectable) → external Songle 2-relay module, NO contact in line with pump control wiring |
 | Pressure | 1–5 V ratiometric transducer, 0–100 psi, on AI1 (GPIO0, ~3:1 divider). Calibrated to the transducer spec (dial gauge read ~8 psi higher; transducer trusted — absolute psi is a reference, the trace shape is what matters) |
-| Pump switch | Furnas pressure switch on the pump, cuts out at 10 psi — the hardware floor beneath the ICE Low Trip (20 psi) and the `Pump Running` threshold |
+| Pump switch | Furnas Class 69 pressure control with auto-off lever, in the 120 VAC starter loop: **Pump → Furnas → ICE relay** in series. Low-pressure cutoff 20 psi with manual lever restart; the ICE Low Trip is set to the same 20 psi |
 | Relays | PCA9557 I2C expander @ 0x1A → ULN2003 (IO1..IO6; IO0 unused) |
 | I2C | SDA=GPIO6, SCL=GPIO7 (DS3231 RTC @ 0x68 shares the bus) |
 | Valves | 1/2" SS motorized ball valve, ~3.55 s travel, internal end-stop switches |
@@ -153,11 +153,11 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: loop still closed; opened only when pressure
     is ≥ **ICE High Trip** (default 95 psi, sustained 3 s) or on the **ICE
-    Low Trip** (default 20 psi; 0 disables). The low trip works like the
-    Furnas lever: from pump start, pressure must reach low+10 within 60 s
-    ("failed to build pressure"), and once it has, 10 s at/below low trips.
-    It is the primary broken-line protection — it fires long before the
-    Furnas 10 psi cut-out or the starter's thermal overloads.
+    Low Trip** (default 20 psi, matching the Furnas; 0 disables). The low
+    trip mirrors the Furnas lever: the relay is closed at rest so a lever
+    start works, it arms once pressure has exceeded Low Trip, and 5 s back
+    at/below it trips. It is the primary broken-line protection — faster
+    than the Furnas and long before the starter's thermal overloads.
   - **After a trip**: the loop opens; once the pump is confirmed stopped
     (< 10 psi for 30 s) the loop **re-closes automatically** so a manual
     restart at the pump house works without HA. The alert (**ICE Tripped**,

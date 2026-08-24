@@ -78,17 +78,16 @@ exactly how zone 1 relates to line 1.
       closed** (decided 2026-08-18, fail-stop). Reboot/OTA blip eliminated
       by the local pca9554 override (2026-08-23) — verify on the bench:
       the module's relay LED must stay lit through a Restart.
-- [x] Furnas pressure switch **cuts out at 10 psi** (confirmed 2026-08-23);
-      that's the hardware floor under the ICE Low Trip (20) and the
-      `Pump Running` threshold (> 10). Cut-in / high-side setting still to
-      confirm so the ICE High Trip is known to sit above it.
-- [x] Low Trip is the primary broken-line protection (fires ~10 s after
-      pressure falls below 20; the Furnas at 10 psi and the starter's
-      thermal overloads are the backups). Start window: pressure must reach
-      low+10 within 60 s of pump start or it trips. After any trip the loop
-      re-closes automatically once the pump is confirmed stopped, so a
-      manual restart at the pump house works; the alert stays latched until
-      ICE Reset.
+- [x] Furnas Class 69 pressure control (auto-off lever): low-pressure
+      cutoff **20 psi**, manual lever restart. Loop is **Pump → Furnas →
+      ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
+      Trip = 20 psi to match. High cut-out setting still to confirm so the
+      ICE High Trip is known to sit above it.
+- [x] Low Trip mirrors the Furnas: relay closed at rest (lever start
+      works), arms above 20 psi, trips 5 s at/below 20. No start window.
+      After any trip the loop re-closes automatically once the pump is
+      confirmed stopped, so the lever restart works; the alert stays
+      latched until ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
 

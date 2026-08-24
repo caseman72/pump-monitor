@@ -588,9 +588,9 @@ number:
     mode: box
 
   # ICE trip setpoints. High: sustained 3 s at/above -> trip. Low: 0 disables;
-  # otherwise, like the Furnas lever: from pump start, pressure must reach
-  # (low + 10) within 60 s or it trips ("failed to build pressure"); once
-  # reached, sustained 10 s at/below low -> trip.
+  # otherwise mirrors the Furnas (set to 20 psi): closed at rest so a lever
+  # start works, arms once pressure exceeds Low Trip, trips after 5 s back
+  # at/below it. Pump -> Furnas -> Relay in series in the 120 VAC starter loop.
   - platform: template
     name: "ICE High Trip"
     id: ice_high_trip
@@ -1090,13 +1090,15 @@ interval:
           id(ice_high_count) = (p >= hi) ? id(ice_high_count) + 1 : 0;
           if (id(ice_high_count) >= 3) why = "HIGH";
 
+          // Low trip mirrors the Furnas lever: relay closed at rest so a
+          // lever start works; once pressure has been above Low Trip it is
+          // armed, and falling back below it (5 s debounce) trips.
           if (lo > 0.5f && running) {
             if (!id(ice_low_armed)) {
-              if (p > lo + 10.0f) { id(ice_low_armed) = true; id(ice_start_count) = 0; }
-              else if (++id(ice_start_count) >= 60) why = "LOW (failed to build pressure after start)";
+              if (p > lo) id(ice_low_armed) = true;
             } else {
               id(ice_low_count) = (p <= lo) ? id(ice_low_count) + 1 : 0;
-              if (id(ice_low_count) >= 10) why = "LOW";
+              if (id(ice_low_count) >= 5) why = "LOW";
             }
           } else {
             id(ice_low_count) = 0;
@@ -1125,7 +1127,7 @@ interval:
           std::string st;
           if (!id(ice_test_latched).empty()) st = id(ice_test_latched);
           else if (!running) st = "ARMED (pump stopped)";
-          else if (lo > 0.5f && !id(ice_low_armed)) st = "ARMED (start window - building pressure)";
+          else if (lo > 0.5f && !id(ice_low_armed)) st = "ARMED (low trip arms above " + std::to_string((int) lo) + " psi)";
           else st = "ARMED";
           if (id(ice_tripped)) st += " - trip latched: " + id(ice_trip_reason) + " (ICE Reset to clear)";
           set_status(st);
