@@ -238,6 +238,7 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
+- `docs/fields.md` — irrigation field layout and head counts per line/zone
 - `TODO.md` — open work and the staged pressure-response design
 - `tools/ha_pressure.py` — pulls Pump Pressure history from the HA recorder (read-only over ssh) and prints sustained plateaus, for logging line/zone pressures
 

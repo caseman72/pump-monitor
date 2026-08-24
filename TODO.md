@@ -51,18 +51,20 @@ exactly how zone 1 relates to line 1.
 
 ### Base pressure per irrigation line
 
-Line data (pipe sections, each with a sprinkler): 1 = 6+8+2 = **17**,
-2 = 6+8+3 = **17**, 3 = 6+8+5 = **19**, 4 = 6+8+6 = **21**. More pipes =
-more flow = lower pressure. Rotation **3 → 1 → 4 → 2** (changes ~9 am;
-avoids double watering). Curve-based predictions in the last column —
-Casey will do a quick run on each line (2026-08-24) to fill the table.
+Head counts per line, corrected 2026-08-24 from the field sketch
+(`docs/fields.md`: fields C/D/E, line 1 at the top): 1 = 6+8+2 = **16**,
+2 = 6+7+3 = **16**, 3 = 6+7+4 = **17**, 4 = 6+8+5 = **19** (Casey will
+confirm during the line tests). More heads = more flow = lower pressure.
+Rotation **3 → 1 → 4 → 2**, one line at a time, never during a lawn cycle.
+Predictions re-based on the corrected counts: line 1 (16) = 51.7 measured
+→ ~7.8 GPM/head; line 2 (16) ≈ 51.7; line 3 (17) ≈ 51.0; line 4 (19) ≈ 49.5.
 
-| Line | Pipes | Base psi | Date | Notes / prediction |
+| Line | Heads | Base psi | Date | Notes / prediction |
 |---|---:|---:|---|---|
-| line 1 | 17 | 51.5–51.7 | 2026-08-23/24 | steady; ≈125 GPM on the curve (right of BEP). 51.7 re-confirmed 2026-08-24 05:30–05:50 and 06:20–07:27 |
-| line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
-| line 3 | 19 | _pending_ | | predict ~49–50. (A 49.9 reading on 2026-08-24 08:18 was mislogged as line 3 — it was lawn zone 3 on line 1, which happens to read the same. Retracted. The dial's ~62 on 2026-08-19 was also wrong; ignore the dial.) |
-| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor — see maintenance history below for why there's margin here |
+| line 1 | 16 | 51.5–51.7 | 2026-08-23/24 | steady; ≈125 GPM on the curve (right of BEP). 51.7 re-confirmed 2026-08-24 05:30–05:50 and 06:20–07:27 |
+| line 2 | 16 | _pending_ | | predict ≈ line 1 (~51.7) |
+| line 3 | 17 | _pending_ | | predict ~51.0 (re-based on 17 heads). (A 49.9 reading on 2026-08-24 08:18 was mislogged as line 3 — it was lawn zone 3 on line 1, which happens to read the same. Retracted. The dial's ~62 on 2026-08-19 was also wrong; ignore the dial.) |
+| line 4 | 19 | _pending_ | 2026-08-24 | predict ~49.5 (re-based on 19 heads); with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor — see maintenance history below for why there's margin here |
 
 ### Pump maintenance history (for context on motor margin)
 
