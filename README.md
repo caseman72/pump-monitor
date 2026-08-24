@@ -22,7 +22,7 @@ an incremental **Pulse Position** for fine trims.
 | I2C | SDA=GPIO6, SCL=GPIO7 (DS3231 RTC @ 0x68 shares the bus) |
 | Valves | 1/2" SS motorized ball valve, ~3.55 s travel, internal end-stop switches |
 | Power | 12–24 V on the board supply terminals (relay coils from onboard 5 V buck) |
-| Pump | Goulds 3656 S-Group 1½ × 2 – 6, 5-15/16" impeller, WEG 5 HP 1-ph 3490 RPM. Pond suction is **flooded (~11 ft above the pump)**, so the gauge reads the curve head **+~5 psi**. At the gauge: **shutoff ~70 psi**, best efficiency (~73%) **~57 psi @ ~100 GPM**, 5 HP motor limit **~46 psi @ ~150 GPM**. Pump off reads ~4–5 psi (pond head). 4" irrigation main (150 psi rated), 1¼–1½" lawn lines |
+| Pump | Goulds 3656 S-Group 1½ × 2 – 6, 5-15/16" impeller, WEG 5 HP 1-ph 3490 RPM. Pond suction is flooded by only **~1 ft** (the pump sits 1 ft below the pond surface; the intake is 10 ft below the pump but intake depth doesn't add head — the free surface does), so the gauge reads curve-head **+ only ~0.4 psi**. Published curve at the gauge: **shutoff ~65 psi**, best efficiency (~73%) **~52 psi @ ~100 GPM**. Pump off should read ~0.4 psi (≈0). **Caveat: measured efficiency is ~49% (see TODO), so the real curve likely sits below published — measure actual dead-head before trusting these.** 4" irrigation main (150 psi rated), 1¼–1½" lawn lines |
 
 The actuators have internal end-stop limit switches, so driving past full
 travel is harmless — the firmware exploits this to re-home on every move.

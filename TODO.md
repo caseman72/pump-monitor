@@ -11,9 +11,12 @@ revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
   extremes also stress the pump (recirculation/cavitation at very low flow,
   motor overload at very high flow). For this Goulds 3656 the published BEP
   is ~73% efficiency at ~100 GPM.
-- **TDH — Total Dynamic Head**: the total pressure the pump develops,
-  expressed in feet of water (1 psi ≈ 2.31 ft). At the gauge here, TDH ≈
-  (gauge psi − ~5 psi flooded-suction boost) × 2.31.
+- **TDH — Total Dynamic Head**: the head the pump itself adds, in feet of
+  water (1 psi ≈ 2.31 ft). Here TDH ≈ (gauge psi − ~0.4 psi suction boost)
+  × 2.31. The suction boost is only ~0.4 psi because the pump sits just
+  **1 ft** below the pond surface (corrected 2026-08-24 — the intake is
+  10 ft below the pump, but intake depth adds no head; the free surface
+  sets it).
 - **Shutoff / dead-head**: zero-flow condition — all outlets closed. The
   pump makes its maximum pressure but no flow, so it just heats the trapped
   water (dangerous for a running pump; hence the ICE high-pressure trip).
@@ -99,11 +102,12 @@ the controller:
 
 **Flow & efficiency (nozzles = 5/32" Rainbird ≈ 5.0 GPM/head @ 50 psi, clean):**
 - Measured operating points: line 1 ≈ 91 GPM @ 51.4 psi, line 4 ≈ 106 GPM @
-  50.3 psi (√P-corrected per-head flow; TDH = (gauge − 5 psi suction) × 2.31
-  ≈ 105-108 ft across all lines).
+  50.3 psi (√P-corrected per-head flow; TDH = (gauge − 0.4 psi suction) × 2.31
+  ≈ 117-118 ft across all lines — corrected suction geometry, was mistakenly
+  ~107 ft with a wrong 5 psi boost).
 - **Efficiency flag**: hydraulic power at line 1 = 91 GPM × 107 ft ÷ 3960 ≈
-  2.46 WHP ≈ 1.83 kW. Sense full-running input ≈ 4.7 kW → shaft ≈ 4.1 kW
-  (87% motor) → **pump efficiency ≈ 45%**, well below the ~73% the Goulds
+  2.70 WHP ≈ 2.0 kW. Sense full-running input ≈ 4.7 kW → shaft ≈ 4.1 kW
+  (87% motor) → **pump efficiency ≈ 49%**, well below the ~73% the Goulds
   curve claims at BEP. Two readings: either the pump runs far off BEP at
   this operating point (not "near BEP" as the design notes had assumed), or
   the impeller/wear rings have degraded and the real curve sits below
@@ -336,6 +340,16 @@ screenshot reading needed for future line runs.
       ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
       (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
+- [ ] **RE-CHECK the ICE High Trip (65 psi) before wiring the relay in.**
+      With the corrected suction geometry (+0.4 psi, not +5), published
+      dead-head at the gauge ≈ **65 psi** — so 65 psi High Trip sits right
+      AT dead-head, not 5 psi below it as previously assumed. And if the
+      pump is worn (measured efficiency ~49%), real shutoff is BELOW 65,
+      making the trip unreachable (never fires) — same failure as the old
+      80 psi setting. Fix: close the main valve slowly, watch the max
+      pressure the pump reaches = the true dead-head at the gauge, then set
+      High Trip a few psi below it. Until then the ICE high-side guard may
+      not actually protect.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
 
