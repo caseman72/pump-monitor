@@ -62,16 +62,21 @@ Casey will do a quick run on each line (2026-08-24) to fill the table.
 | line 1 | 17 | 51.5 | 2026-08-23 | steady; ≈125 GPM on the curve (right of BEP) |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
 | line 3 | 19 | _pending_ | | predict ~49–50. (Dial read ~62 on 2026-08-19 with line 3 on — inconsistent with the pipe count; the dial's offset is evidently not a constant 8 psi. Ignore the dial.) |
-| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with an evening lawn zone on top, ~43–45 → ~150 GPM ≈ 5 HP motor near full load per the curve (Casey: overloads trip when warranted; the original heaters dropped occasionally at the high-flow end, so they were upsized with the pump installer's OK — consistent with the curve. With bigger heaters there's less thermal margin, so the controller's pressure FLOOR (~46–48 psi at the gauge) is a real motor-protection constraint, not just an efficiency preference. Pump leads were also upsized 12 → 10 AWG (12 AWG is 20 A-rated vs ~23 A full load — hot leads + voltage drop = extra current = nuisance heater drops); the installer's clamp reading was somewhere in 20–30 A (not precisely recalled) — 87–130% of the 23.1 A nameplate, too wide to place on the curve. A fresh clamp reading, noted with which line/zone was running, is the one measurement that would pin the motor's real margin. A clamp-meter reading on line 4 + lawn zone 1 would still put a number on it) |
+| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor (Casey: overloads trip when warranted; the original heaters dropped occasionally at the high-flow end, so they were upsized with the pump installer's OK — consistent with the curve. With bigger heaters there's less thermal margin, so the controller's pressure FLOOR (~46–48 psi at the gauge) is a real motor-protection constraint, not just an efficiency preference. Pump leads were also upsized 12 → 10 AWG (12 AWG is 20 A-rated vs ~23 A full load — hot leads + voltage drop = extra current = nuisance heater drops); the installer's clamp reading was somewhere in 20–30 A (not precisely recalled) — 87–130% of the 23.1 A nameplate, too wide to place on the curve. A fresh clamp reading, noted with which line/zone was running, is the one measurement that would pin the motor's real margin. A clamp-meter reading on line 4 + lawn zone 1 would still put a number on it) |
 
 ### Lawn zone deltas (measured on line 1)
 
+Lawn zones are Rain Bird-type pop-ups and watering tips — small loads
+(~2–20 GPM each, i.e. two or three irrigation heads at most), unlike the
+~7 GPM impact heads on the irrigation lines. Flow estimates use the
+curve slope near the operating point (~0.2–0.25 psi per GPM).
+
 | Lawn zone | psi observed | Delta | Date |
 |---|---:|---:|---|
-| zone 1 (front) | 47.4 | −4.1 | 2026-08-23 (≈145 GPM — motor near full load) |
-| zone 2 | 48.5 | −3.0 | 2026-08-23 |
-| zone 3 | 49.8 | −1.7 | 2026-08-23 |
-| zone 4 | 51.1 | −0.4 | 2026-08-23 |
+| zone 1 (front) | 47.4 | −4.1 | 2026-08-23 (≈ +15–20 GPM) |
+| zone 2 | 48.5 | −3.0 | 2026-08-23 (≈ +12–15 GPM) |
+| zone 3 | 49.8 | −1.7 | 2026-08-23 (≈ +7 GPM) |
+| zone 4 | 51.1 | −0.4 | 2026-08-23 (≈ +2 GPM, drip/tips; or baseline drift) |
 
 ### Pump zones (mornings)
 
