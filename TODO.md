@@ -15,10 +15,10 @@ Zones (on `Pump Pressure`):
 
 | Zone | Condition | Response |
 |---|---|---|
-| **Green** | ~44–58 psi (BEP ≈ 50–52; below ~42 the 5 HP motor is at full load — overload territory; above ~58 flow is dropping toward shutoff at 65) | nothing |
-| **Yellow** | > ~58 psi (or < ~44) | Valve 1 opens in steps (Pulse +) until pressure is back in band; when Valve 1 reaches 100%, Valve 2 starts opening the same way. Low side: pressure < ~44 means flow > ~140 GPM — motor near full load — so the response there is to CLOSE recycle, not open |
-| **Red** | > ~60 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
-| **DEFCON 1** | at/near shutoff (~62+ psi), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 60 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~65 psi, so 70/80 were unreachable numbers |
+| **Green** | ~48–62 psi at the gauge (BEP ≈ 57; below ~46 the 5 HP motor is at full load — overload territory; above ~62 flow is dropping toward dead-head at ~70) | nothing |
+| **Yellow** | > ~62 psi (or < ~48) | Valve 1 opens in steps (Pulse +) until pressure is back in band; when Valve 1 reaches 100%, Valve 2 starts opening the same way. Low side: pressure < ~48 means flow > ~140 GPM — motor near full load — so the response there is to CLOSE recycle, not open |
+| **Red** | > ~64 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
+| **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
 
 Design notes:
 - Valve response uses the pulse primitive (no re-home transient); the
@@ -60,7 +60,7 @@ exactly how zone 1 relates to line 1.
 
 | Lawn zone | psi observed | Delta | Date |
 |---|---:|---:|---|
-| zone 1 (front) | 47.4 | −4.1 | 2026-08-23 |
+| zone 1 (front) | 47.4 | −4.1 | 2026-08-23 (≈145 GPM — motor near full load) |
 | zone 2 | 48.5 | −3.0 | 2026-08-23 |
 | zone 3 | 49.8 | −1.7 | 2026-08-23 |
 | zone 4 | _pending_ | | |
@@ -82,13 +82,14 @@ exactly how zone 1 relates to line 1.
       cutoff **20 psi**. Loop is **Pump → Furnas →
       ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
       Trip disabled (0) — the ICE guards the high side only. The Furnas has NO high setting — the ICE is the pump's only
-      high-pressure protection. High Trip 60 psi (2026-08-23, from the pump curve).
+      high-pressure protection. High Trip 65 psi (2026-08-23, from the pump curve + flooded suction).
 - [x] ICE relay = debounced comparator with hysteresis, HIGH side only
       (Low Trip 0 = disabled; low pressure is the Furnas's job): opens after
-      3 s ≥ 60 psi, re-closes after 2 s back in band.
-- [x] Pump curve (Goulds 3656 1½×2–6, A 5-15/16" impeller, 3500 RPM):
-      shutoff ~65 psi, BEP ~52 psi @ 100 GPM, 5 HP limit ~41 psi @ 150 GPM.
-      High Trip set to **60 psi** (80 was above shutoff and could never fire). Starter is HAND–OFF–AUTO: start in HAND,
+      3 s ≥ 65 psi, re-closes after 2 s back in band.
+- [x] Pump curve (Goulds 3656 1½×2–6, A 5-15/16" impeller, 3500 RPM) with
+      ~11 ft flooded suction (+5 psi at the gauge): shutoff ~70 psi, BEP
+      ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
+      (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
