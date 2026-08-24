@@ -44,7 +44,8 @@ the PI trim absorbs that. Recycle valves closed unless noted;
 transducer-calibrated psi.
 
 Naming: **line N** = the long irrigation lines (line 1 = smallest/shortest);
-**lawn zones 1–4** (house system, evenings); **pump zones 1–2** (mornings
+**lawn zones 1–4** (house system, evenings; they never run alone — always on
+top of an irrigation line); **pump zones 1–2** (mornings
 ~5–6 am). Casey: "lawn zone 1 (front) is my shortest long line" — to confirm
 exactly how zone 1 relates to line 1.
 
@@ -76,8 +77,11 @@ exactly how zone 1 relates to line 1.
 
 - [ ] Wire the ICE relay into the pump loop. **NO contact, energized = loop
       closed** (decided 2026-08-18, fail-stop). Reboot/OTA blip eliminated
-      by the local pca9554 override (2026-08-23) — verify on the bench:
-      the module's relay LED must stay lit through a Restart.
+      by the local pca9554 override — **bench-verified 2026-08-23**: relay
+      LED stayed lit through a Restart.
+- [x] Soak test: ICE left ARMED (relay not yet in the loop) for the
+      monitoring period — any spurious trip shows up in ICE Tripped/Status
+      with no consequences.
 - [x] Furnas Class 69 pressure control (auto-off lever): low-pressure
       cutoff **20 psi**. Loop is **Pump → Furnas →
       ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
@@ -86,7 +90,8 @@ exactly how zone 1 relates to line 1.
 - [x] ICE relay = debounced comparator with hysteresis, HIGH side only
       (Low Trip 0 = disabled; low pressure is the Furnas's job): opens after
       3 s ≥ 65 psi, re-closes after 2 s back in band.
-- [x] Pump curve (Goulds 3656 1½×2–6, A 5-15/16" impeller, 3500 RPM) with
+- [x] Pump curve (Goulds 3656 1½×2–6 — 1½" outlet confirmed — A 5-15/16"
+      impeller, 3500 RPM) with
       ~11 ft flooded suction (+5 psi at the gauge): shutoff ~70 psi, BEP
       ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
       (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
