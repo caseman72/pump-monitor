@@ -25,6 +25,48 @@ revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 - **WHP — Water HorsePower**: hydraulic output power = GPM × TDH(ft) ÷ 3960.
 - **COID — Central Oregon Irrigation District**: the water supplier.
 
+## 0. Project roadmap & risk model (Casey, 2026-08-24)
+
+**Now — no safety layer needed.** The pump runs near max against the
+always-open irrigation lines (manual aluminum pipe, controller-independent).
+That big open flow path means the pump can't dead-head no matter what the
+controller does. Lawn zones add only ~2 psi on top. This is why the ICE
+pump-kill isn't being wired (see the decision in section 1) — there is
+simply nothing for it to protect against yet.
+
+**Future — automated zones, where the recycle system becomes load-bearing.**
+Field A first: 4 zones, **underground glued PVC**, in-ground **Falcon**
+heads, ~8 heads/zone (maybe 10 depending on spacing — call it the flow-
+equivalent of ~8 sprinklers). When an automated zone switches, all paths can
+momentarily close → dead-head. With no always-open irrigation line in that
+scenario, **the recycle system MUST work flawlessly** to dump pressure to
+the pond. It will NOT be allowed to run un-manned / un-fail-safed until
+proven.
+
+### Validation plan — prove recycle before trusting it
+
+**Step 1 — build the sprinkler node.** Convert the 2 existing pump-house
+lawn zones to an Arduino/ESPHome sprinkler controller (the second PLC-100;
+24 VAC solenoids). This is the automation testbed.
+
+**Step 2 — the bounded-risk recycle stress test.** Set up a HIGH-pressure,
+LOW-flow scenario and force dead-head events at the recycle system:
+- Run just **6 sprinklers** (one short line) with the pump-monitor holding
+  pressure at **BEP**. Low flow → pressure runs high (near shutoff), the
+  hardest case for pressure control.
+- Cycle the 2 lawn zones **open → close → open → close → off** — each close
+  is a dead-head event the recycle valves must catch by opening to the pond.
+- **Why it's safe to fail here:** the 6-sprinkler line is always open and
+  the automation can't close it, so the pump ALWAYS has a flow path — it
+  never truly dead-heads. If the recycle logic fails, pressure spikes toward
+  the 6-head operating point and may **break a PVC fitting ($ + time)** —
+  but never damages the **pump ($$$$)**. Pump safety is guaranteed by
+  construction (the un-closeable minimum path), so only the recycle control
+  logic is on trial.
+
+Only after the recycle system is proven flawless in this bounded test does
+it earn the right to run Field A's automated zones un-manned.
+
 ## 1. Staged pressure response (the real control system) — NOT YET
 
 > **DECISION 2026-08-24 — the ICE pump-kill relay is NOT being wired into
