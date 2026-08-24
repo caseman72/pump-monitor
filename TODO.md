@@ -486,7 +486,12 @@ screenshot reading needed for future line runs.
 
 - [ ] Second PLC-100 (have both an ESP32 V1 and a Nano V2 + Nano ESP32),
       standard 24 VAC solenoids, 2–3 zones now, +4 later (6 relays; I2C
-      PCF8574 + relay module if it ever hits 7).
+      PCF8574 + relay module if it ever hits 7). **Use the native ESPHome
+      `sprinkler:` component** (see `docs/sprinkler-component-notes.md`) —
+      each zone = a GPIO relay switch; `run_duration_number` for HA-tunable
+      times; `valve_overlap` gives open-before-close (no dead-head at zone
+      transitions) natively. Recycle stays in the pump-monitor node
+      (pressure-driven), NOT the sprinkler component's pump_switch.
 - [ ] Open-next-before-close-previous sequencing so a flow path always
       exists; a few seconds of delay between zones. No solenoid timing
       exists (OpenSprinkler only has station delay / master on-off adjust).

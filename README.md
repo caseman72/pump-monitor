@@ -238,6 +238,7 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
+- `docs/sprinkler-component-notes.md` — ESPHome sprinkler component reference for the lawn/zone node
 - `docs/fields.md` — irrigation field layout and head counts per line/zone
   (source sketches and satellite photos live in the local, gitignored `images/`)
 - `TODO.md` — open work and the staged pressure-response design
