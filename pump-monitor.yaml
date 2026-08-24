@@ -48,6 +48,13 @@ substitutions:
   home_margin_s: "0.25"   # extra drive past full travel when homing either
                           # direction; the end-stop switch cuts the motor
 
+  # ICE relay polarity. "true": pump loop runs through the module's NO
+  # contact, relay ENERGIZED = loop closed (every ESP reboot drops the loop
+  # for ~1 s - on a latching starter that kills the pump). "false": loop
+  # through the NC contact, relay energized only to TRIP - reboots, crashes
+  # and a dead controller all leave the pump running. NC is recommended.
+  ice_run_energized: "true"
+
 esphome:
   name: pump-monitor
   friendly_name: Pump Monitor
@@ -73,6 +80,7 @@ esphome:
           id(v1_pulse_count).publish_state(id(v1_pulse));
           id(v2_pulse_number).publish_state(id(v2_pulse));
           id(v2_pulse_count).publish_state(id(v2_pulse));
+      - script.execute: ice_apply
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -145,6 +153,36 @@ globals:
     restore_value: yes
     initial_value: '0'
   - id: v2_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # ICE trip state. ice_tripped persists across reboots: a tripped loop
+  # stays open until ICE Reset (the pump needs a manual restart anyway).
+  - id: ice_tripped
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+  - id: ice_trip_reason
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: ice_test_latched
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: ice_low_armed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ice_high_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_low_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_run_count
     type: int
     restore_value: no
     initial_value: '0'
@@ -269,17 +307,17 @@ switch:
             ESP_LOGI("valve2", "OPEN energized for %.2f s", t);
           }
 
-  # ICE (in-case-of-emergency) pump enable: REL5/REL6 drive an external
-  # 2-relay module (Songle SRD-05VDC) whose NO contact is in line with the
-  # pump control wiring. ON = relay energized = pump circuit closed; any
-  # failure (reboot, dead ESP, broken wire, outage) drops it = pump cut.
-  # Only ONE relay is in service at a time - the other is a spare selected
-  # via "Control Wiring Relay Select" (no OTA needed if one dies).
+  # ICE (in-case-of-emergency) pump protection: REL5/REL6 drive an external
+  # 2-relay module in line with the pump's latching starter loop. ONE break
+  # of that loop = pump off until someone restarts it by hand, so the loop
+  # is opened ONLY on a latched pressure trip - never for a reboot or a
+  # switch. Only ONE relay is in service; the other is a spare selected via
+  # "Control Wiring Relay Select" (no OTA needed if one dies).
   - platform: gpio
     id: ice_rel5
     name: "ICE REL5 (raw)"
     internal: true
-    restore_mode: ALWAYS_OFF
+    restore_mode: RESTORE_DEFAULT_OFF
     pin:
       pca9554: relay_expander
       number: 5
@@ -289,31 +327,37 @@ switch:
     id: ice_rel6
     name: "ICE REL6 (raw)"
     internal: true
-    restore_mode: ALWAYS_OFF
+    restore_mode: RESTORE_DEFAULT_OFF
     pin:
       pca9554: relay_expander
       number: 6
       mode: OUTPUT
 
-  # The one switch HA sees: routes to REL5 or REL6 per the selector.
-  # Comes up OFF after any reboot (deliberate re-enable). The valve
-  # dead-man timer deliberately does NOT touch these.
+  # ON  = BYPASS: loop held closed unconditionally (work on the board,
+  #       reboot, change a valve). Default, and remembered across reboots.
+  # OFF = AUTOMATION ARMED: loop still closed; opened only by a pressure
+  #       trip (see ICE High/Low Trip). Turning this OFF never cuts power.
   - platform: template
     name: "Control Wiring Relay"
-    id: ice_control
-    icon: "mdi:electric-switch"
+    id: ice_bypass
+    icon: "mdi:shield-check"
     optimistic: true
-    restore_mode: ALWAYS_OFF
+    restore_mode: RESTORE_DEFAULT_ON
     on_turn_on:
-      - lambda: |-
-          if (id(ice_select).active_index().value_or(0) == 0) {
-            id(ice_rel5).turn_on();
-          } else {
-            id(ice_rel6).turn_on();
-          }
+      - script.execute: ice_apply
     on_turn_off:
-      - switch.turn_off: ice_rel5
-      - switch.turn_off: ice_rel6
+      - script.execute: ice_apply
+
+  # Test mode: the trip logic runs and reports in "ICE Status" ("TEST:
+  # would trip ...") but the relay is never actuated. Use with a lowered
+  # High Trip and a slow main-valve closure to prove the logic safely.
+  - platform: template
+    name: "ICE Test Mode"
+    id: ice_test_mode
+    icon: "mdi:test-tube"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
 
 select:
   - platform: template
@@ -326,17 +370,9 @@ select:
     entity_category: config
     icon: "mdi:swap-horizontal"
     on_value:
-      # Selector changed while ON: make-before-break onto the new relay.
-      - lambda: |-
-          if (id(ice_control).state) {
-            if (i == 0) {
-              id(ice_rel5).turn_on();
-              id(ice_rel6).turn_off();
-            } else {
-              id(ice_rel6).turn_on();
-              id(ice_rel5).turn_off();
-            }
-          }
+      # Re-drive the loop state onto the newly selected relay
+      # (make-before-break inside ice_apply).
+      - script.execute: ice_apply
 
 # Native HA valve entities. Position slider = calibrated flow %.
 # open = full open, close = SEAT (pump off only!), stop = relays off.
@@ -456,6 +492,23 @@ button:
           id(v2_pulse_target) = t;
       - script.execute: v2_pulse_go
 
+  # Clears a latched trip (real or test) and re-closes the loop. The pump
+  # still needs its manual restart afterwards.
+  - platform: template
+    name: "ICE Reset"
+    icon: "mdi:restart-alert"
+    on_press:
+      - lambda: |-
+          id(ice_tripped) = false;
+          id(ice_trip_reason) = "";
+          id(ice_test_latched) = "";
+          id(ice_low_armed) = false;
+          id(ice_high_count) = 0;
+          id(ice_low_count) = 0;
+          id(ice_run_count) = 0;
+          ESP_LOGW("ice", "Trip reset by user");
+      - script.execute: ice_apply
+
   - platform: restart
     name: "Restart"
     icon: "mdi:restart"
@@ -490,6 +543,37 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    mode: box
+
+  # ICE trip setpoints. High: sustained 3 s at/above -> trip. Low: 0 disables;
+  # otherwise arms only after 30 s above (low + 10) so a pump start-up or a
+  # deliberate stop doesn't trip it, then sustained 10 s at/below -> trip.
+  - platform: template
+    name: "ICE High Trip"
+    id: ice_high_trip
+    unit_of_measurement: "psi"
+    icon: "mdi:gauge-full"
+    entity_category: config
+    min_value: 30
+    max_value: 120
+    step: 1
+    initial_value: 95
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "ICE Low Trip"
+    id: ice_low_trip
+    unit_of_measurement: "psi"
+    icon: "mdi:gauge-empty"
+    entity_category: config
+    min_value: 0
+    max_value: 50
+    step: 1
+    initial_value: 20
+    optimistic: true
+    restore_value: true
     mode: box
 
   # Pulse target (0..16): direct "jump to N" - pulses the valve from its
@@ -683,6 +767,26 @@ script:
           id(valve_2).position = vm_frac_to_flow(id(v2_frac)) / 100.0f;
           id(valve_2).publish_state();
 
+  # Drive the ICE relay to the current loop state. Loop is CLOSED (pump may
+  # run) unless a real trip is latched and bypass is off. Polarity per
+  # ice_run_energized. Make-before-break across the REL5/REL6 selector.
+  - id: ice_apply
+    mode: restart
+    then:
+      - lambda: |-
+          bool loop_closed = id(ice_bypass).state || !id(ice_tripped);
+          bool energize = loop_closed ? ${ice_run_energized} : !${ice_run_energized};
+          bool use5 = id(ice_select).active_index().value_or(0) == 0;
+          if (energize) {
+            if (use5) { id(ice_rel5).turn_on();  id(ice_rel6).turn_off(); }
+            else      { id(ice_rel6).turn_on();  id(ice_rel5).turn_off(); }
+          } else {
+            id(ice_rel5).turn_off();
+            id(ice_rel6).turn_off();
+          }
+          ESP_LOGI("ice", "loop %s (relay %s, %s)", loop_closed ? "CLOSED" : "OPEN",
+                   energize ? "energized" : "released", use5 ? "REL5" : "REL6");
+
   # Dead-man: drops the valve relays 20 s after the last turn-on no matter
   # what (covers a lost HA/Wi-Fi connection mid-move). Harmless no-op if
   # the relays were already released. Does NOT touch the ICE relays.
@@ -818,7 +922,21 @@ sensor:
     update_interval: never
     entity_category: diagnostic
 
+binary_sensor:
+  - platform: template
+    name: "ICE Tripped"
+    id: ice_tripped_sensor
+    device_class: problem
+    icon: "mdi:alert-octagon"
+    lambda: 'return id(ice_tripped);'
+
 text_sensor:
+  - platform: template
+    name: "ICE Status"
+    id: ice_status
+    icon: "mdi:shield-half-full"
+    update_interval: never
+
   - platform: wifi_info
     ip_address:
       name: "IP Address"
@@ -830,6 +948,65 @@ text_sensor:
       entity_category: diagnostic
 
 interval:
+  # ICE trip evaluation, once a second.
+  - interval: 1s
+    then:
+      - lambda: |-
+          std::string st;
+          auto set_status = [&](const std::string &x) {
+            if (id(ice_status).state != x) id(ice_status).publish_state(x);
+          };
+          auto reset_counts = [&]() {
+            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_run_count) = 0;
+          };
+          if (id(ice_bypass).state) {
+            reset_counts();
+            set_status(id(ice_tripped) ? "BYPASS (trip latched: " + id(ice_trip_reason) + ")" : "BYPASS");
+            return;
+          }
+          if (id(ice_tripped)) {
+            set_status("TRIPPED " + id(ice_trip_reason));
+            return;
+          }
+          float v = id(pressure_volts).state;
+          float p = id(pump_pressure).state;
+          bool sensor_ok = !isnan(v) && !isnan(p) && v > 0.7f && v < 5.3f;
+          if (!sensor_ok) {
+            reset_counts();
+            set_status("SENSOR FAULT - not tripping");
+            return;
+          }
+          float hi = id(ice_high_trip).state;
+          float lo = id(ice_low_trip).state;
+          if (lo > 0.5f && !id(ice_low_armed)) {
+            if (p > lo + 10.0f) { if (++id(ice_run_count) >= 30) id(ice_low_armed) = true; }
+            else id(ice_run_count) = 0;
+          }
+          id(ice_high_count) = (p >= hi) ? id(ice_high_count) + 1 : 0;
+          id(ice_low_count)  = (lo > 0.5f && id(ice_low_armed) && p <= lo) ? id(ice_low_count) + 1 : 0;
+          const char *why = nullptr;
+          if (id(ice_high_count) >= 3) why = "HIGH";
+          else if (id(ice_low_count) >= 10) why = "LOW";
+          if (why != nullptr) {
+            char buf[48];
+            snprintf(buf, sizeof(buf), "%s at %.1f psi", why, p);
+            if (id(ice_test_mode).state) {
+              id(ice_test_latched) = std::string("TEST: would trip ") + buf;
+              ESP_LOGW("ice", "%s", id(ice_test_latched).c_str());
+              reset_counts();
+            } else {
+              id(ice_tripped) = true;
+              id(ice_trip_reason) = buf;
+              ESP_LOGE("ice", "TRIP %s - opening pump loop", buf);
+              id(ice_apply).execute();
+              set_status("TRIPPED " + id(ice_trip_reason));
+              return;
+            }
+          }
+          if (!id(ice_test_latched).empty()) set_status(id(ice_test_latched));
+          else if (lo > 0.5f && !id(ice_low_armed)) set_status("ARMED (low trip arming)");
+          else set_status("ARMED");
+
   - interval: 100ms
     then:
       - lambda: |-

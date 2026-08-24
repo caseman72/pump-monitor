@@ -135,19 +135,31 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
 - **Valve N Open/Close (RELx)** switches — raw relay diagnostics
 - **Valve N Elapsed / Last Open Time / Last Close Time** — motion
   diagnostics (verify positioning pulses without log access)
-- **Control Wiring Relay** — the pump ICE (in-case-of-emergency) enable
-  relay, routed to REL5 or REL6 per **Control Wiring Relay Select** (config
-  entity). The spare relay makes a failed one a dropdown flip, not a
-  reflash. The pump circuit runs through the module's **NO** contact:
-  switch ON = relay energized = pump enabled; anything abnormal — broken
-  wire, dead ESP, power outage, reboot — drops the relay and cuts the
-  pump (fail-stop). After any reboot the switch comes up OFF, so the pump
-  must be deliberately re-enabled. Selector changes while ON are
-  make-before-break: the new relay energizes before the old releases, so
-  the pump doesn't blip during a swap (NO contacts in parallel).
-  The valve dead-man timer deliberately does not touch these relays.
+- **Control Wiring Relay** — the pump ICE (in-case-of-emergency) protection.
+  The pump runs on a *latching* starter loop: one break = pump off until a
+  manual restart. So the loop is opened **only on a latched pressure trip**,
+  never by a reboot or a switch:
+  - **ON = bypass**: loop held closed unconditionally (work on the board,
+    reboot, swap a valve). Default; remembered across reboots.
+  - **OFF = automation armed**: loop still closed; opened only when pressure
+    is ≥ **ICE High Trip** (default 95 psi, sustained 3 s) or ≤ **ICE Low
+    Trip** (default 20 psi; 0 disables; arms only after 30 s above low+10,
+    then sustained 10 s). A trip latches (**ICE Tripped**, reason in **ICE
+    Status**) until **ICE Reset**. A sensor fault (transducer voltage out of
+    the 0.7–5.3 V range) never trips.
+  - **ICE Test Mode**: the trip logic runs and reports "TEST: would trip …"
+    in ICE Status but never actuates the relay — lower the High Trip and
+    close the main valve slowly to prove it with zero risk.
+  - **Control Wiring Relay Select** picks REL5 or REL6 (spare swap without a
+    reflash); changes are make-before-break.
+  - Polarity is the `ice_run_energized` substitution. `"true"` = loop through
+    the module's **NO** contact, relay energized to run (an ESP reboot drops
+    the loop ~1 s — fatal on a latching starter). `"false"` = loop through
+    **NC**, relay energized only to trip — reboots, crashes and a dead
+    controller leave the pump running. **NC is the recommended wiring.**
+  - The valve dead-man timer and STOP All never touch these relays.
 - **STOP All** — valve relays off immediately (does not touch the ICE
-  relay); **Restart** — reboot the ESP
+  relay); **Restart** — reboot the ESP; **ICE Reset** — clear a latched trip
 - WiFi RSSI, IP Address, WiFi Network, Uptime
 
 ## Building & uploading
@@ -176,6 +188,13 @@ then delete the `OTA_OLD_PASSWORD` line.
 ## TODO
 
 - [ ] Pressure control automation using Pulse Position increment/decrement
+      (feedforward table per irrigation line + slow PI trim, 55 psi setpoint)
+- [ ] Recycle failsafe: when zone solenoids are automated, open Valve 1 to
+      ~15% if the HA/API connection is lost (keeps the 5 HP pump cool)
+- [ ] Wire the ICE relay into the pump loop (NC recommended) and run the
+      Test Mode exercise at a ~60 psi threshold first
+- [ ] Sprinkler node: second PLC-100, 24 VAC solenoids, 2–3 zones now (+4
+      later); open-next-before-close-previous sequencing
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
 - [ ] Measure Valve 2's Full Travel Time after install
 - [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
