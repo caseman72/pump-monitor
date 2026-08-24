@@ -135,10 +135,12 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
 - **Valve N Open/Close (RELx)** switches — raw relay diagnostics
 - **Valve N Elapsed / Last Open Time / Last Close Time** — motion
   diagnostics (verify positioning pulses without log access)
-- **Control Wiring Relay** — the pump ICE (in-case-of-emergency) protection.
-  The pump runs on a *latching* starter loop: one break = pump off until a
-  manual restart. So the loop is opened **only on a latched pressure trip**,
-  never by a reboot or a switch:
+- **ICE** — the pump's in-case-of-emergency protection. The pump runs on a
+  *latching* starter loop: one break = pump off until a manual restart. So
+  the loop is opened **only on a latched pressure trip**, never by a reboot
+  or a switch. **Control Wiring Relay** is a read-only sensor of the loop
+  itself (ON = closed / pump enabled, OFF = open / tripped); **ICE Bypass**
+  is the mode switch:
   - **ON = bypass**: loop held closed unconditionally (work on the board,
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: loop still closed; opened only when pressure

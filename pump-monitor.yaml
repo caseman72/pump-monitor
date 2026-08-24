@@ -337,8 +337,9 @@ switch:
   #       reboot, change a valve). Default, and remembered across reboots.
   # OFF = AUTOMATION ARMED: loop still closed; opened only by a pressure
   #       trip (see ICE High/Low Trip). Turning this OFF never cuts power.
+  # The actual loop state is the read-only "Control Wiring Relay" sensor.
   - platform: template
-    name: "Control Wiring Relay"
+    name: "ICE Bypass"
     id: ice_bypass
     icon: "mdi:shield-check"
     optimistic: true
@@ -784,6 +785,8 @@ script:
             id(ice_rel5).turn_off();
             id(ice_rel6).turn_off();
           }
+          id(ice_loop_closed).publish_state(loop_closed);
+          id(ice_relay_energized).publish_state(energize);
           ESP_LOGI("ice", "loop %s (relay %s, %s)", loop_closed ? "CLOSED" : "OPEN",
                    energize ? "energized" : "released", use5 ? "REL5" : "REL6");
 
@@ -923,6 +926,21 @@ sensor:
     entity_category: diagnostic
 
 binary_sensor:
+  # The pump control loop as the pump sees it: ON = closed (pump enabled),
+  # OFF = open (tripped). True for either NO or NC wiring.
+  - platform: template
+    name: "Control Wiring Relay"
+    id: ice_loop_closed
+    device_class: power
+    icon: "mdi:electric-switch"
+
+  # Raw coil state of the selected ICE relay (bench diagnostics).
+  - platform: template
+    name: "ICE Relay Energized"
+    id: ice_relay_energized
+    icon: "mdi:electric-switch-closed"
+    entity_category: diagnostic
+
   - platform: template
     name: "ICE Tripped"
     id: ice_tripped_sensor
