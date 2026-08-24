@@ -18,8 +18,14 @@ tapers, so its lines carry fewer heads.
 | 3 | 6 | 8 | 5 | **19** |
 | 4 | 6 | 8 | 1+6 | **21** |
 
-Nozzles: **5/32" Rainbird**. Counts above are physically verified
-(supersede the earlier sketch estimate of 16/16/17/19).
+Nozzles: **5/32" Rainbird** (~5.0 GPM/head at 50 psi at the nozzle,
+clean). Counts above are physically verified (supersede the earlier sketch
+estimate of 16/16/17/19).
+
+**Main line**: ~1000 ft of **4"→3" aluminum latch-coupling pipe**, 11
+risers/openers. Latch (lever-lock) couplings leak at the gaskets by design,
+unlike glued PVC — so flow through the pump exceeds nozzle flow, and there's
+friction loss between the pump and the field.
 
 Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 (morning normally; evenings when the schedule is flipped).

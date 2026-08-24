@@ -76,6 +76,8 @@ exactly how zone 1 relates to line 1.
 Head counts confirmed by physical count + line tests 2026-08-24
 (`docs/fields.md`; nozzles are **5/32" Rainbird**): line 1 = 6+8+1+3 = **18**,
 line 2 = 6+8+4 = **18**, line 3 = 6+8+5 = **19**, line 4 = 6+8+1+6 = **21**.
+Main line: ~1000 ft of 4"→3" aluminum latch-coupling pipe, 11 risers/openers
+(leaks at gaskets by design — not glued PVC).
 
 **Measured base pressures (recorder + Casey's notes, 2026-08-24 11:00-11:45):**
 
@@ -105,24 +107,42 @@ the controller:
   50.3 psi (√P-corrected per-head flow; TDH = (gauge − 0.4 psi suction) × 2.31
   ≈ 117-118 ft across all lines — corrected suction geometry, was mistakenly
   ~107 ft with a wrong 5 psi boost).
-- **Efficiency flag**: hydraulic power at line 1 = 91 GPM × 107 ft ÷ 3960 ≈
-  2.70 WHP ≈ 2.0 kW. Sense full-running input ≈ 4.7 kW → shaft ≈ 4.1 kW
-  (87% motor) → **pump efficiency ≈ 49%**, well below the ~73% the Goulds
-  curve claims at BEP. Two readings: either the pump runs far off BEP at
-  this operating point (not "near BEP" as the design notes had assumed), or
-  the impeller/wear rings have degraded and the real curve sits below
-  published. **This is separate from the year-over-year power drift** — that
-  trend is the (now-replaced) capacitor, a MOTOR/electrical loss; this ~49%
-  is PUMP/hydraulic efficiency (water power out ÷ shaft power in), which a
-  capacitor can't cause. If anything the bad 2024 cap makes this estimate a
-  slight UNDER-count (a worse-than-assumed motor efficiency means real shaft
-  power was lower, so real pump efficiency is a bit higher than 49% — call
-  it ~52%, still well short of 73%). NOT a conclusion — the number is rough
-  (generic published curve, assumed 87% motor efficiency, static-suction
-  approximation). Worth a proper check: a clean simultaneous GPM-by-catch-can
-  + psi + kW reading. If real off-BEP/wear is confirmed, the pressure "sweet
-  spot" and the BEP-based zone bands in section 1 should be re-derived from
-  the pump's actual curve, not the published one.
+- **Efficiency estimate — INCONCLUSIVE, not a wear finding** (walked back
+  2026-08-24 after Casey flagged the missing variables): a first pass gave
+  ~49% pump efficiency (2.7 WHP hydraulic ÷ ~4.1 kW shaft), well below the
+  ~73% published — but that assumed pump flow = nozzle flow and a perfectly
+  calibrated transducer, and both are wrong:
+  - **Gasket leakage**: this is 3" aluminum latch-coupling irrigation pipe
+    (not glued PVC) — it leaks at every coupling/riser by design, so flow
+    THROUGH THE PUMP is higher than nozzle flow. Raises efficiency.
+  - **Main line friction**: ~1000 ft of 4"→3" mainline, 11 risers/openers,
+    between pump and field — the nozzles see meaningfully less than the
+    51 psi at the pump, so per-head flow is below the 5 GPM @ 50 psi spec.
+    Lowers the flow estimate.
+  - **Transducer offset unverified**: the whole calc rests on the ~51 psi
+    reading. If it reads ~8 psi low (true ~59), head and efficiency both
+    jump. Not yet checked against a reference (see the pump-off test below).
+  - **New pump packing** (replaced 2026, Casey): over-tight packing adds
+    shaft drag → higher input, lower apparent efficiency; the 2024 Sense
+    data used here predates the new packing, so the input was on the
+    pessimistic side too.
+  Net: these push efficiency in both directions; plausibly ~50-65% =
+  a healthy pump. **No wear conclusion — the estimate has too many
+  unmeasured variables.** To actually measure it: simultaneous
+  catch-can GPM (accounting for leakage) + verified psi + kW on one line.
+  - **End-of-line gauge** (Casey can do this): put a gauge at the far end of
+    a running line → reads FIELD pressure. Then:
+      · mainline+coupling loss = pump transducer − field gauge (measured,
+        not estimated);
+      · true nozzle pressure → corrects per-head flow (5 GPM is specced AT
+        the nozzle, so if the field end reads e.g. 42 psi, each head flows
+        ~5×√(42/50) ≈ 4.6 GPM, not 5.0);
+      · a second cross-check on the pump transducer if the two gauges can be
+        compared at a common known pressure.
+  - **Pump-off transducer check** (do first, it's free): with the corrected
+    1-ft suction geometry the pump-off gauge should read ~0.4 psi (≈0). If
+    it reads +8/−8 at zero flow, the transducer has an offset and every
+    pressure-derived number above shifts accordingly.
 
 **COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
 Deschutes River natural flows are dropping; COID is reducing deliveries to
@@ -136,6 +156,9 @@ Worth wiring pond level into HA eventually so the controller can see it.
 Two separate events, not one visit — corrected 2026-08-24 after conflating
 them:
 
+- **Pump packing replaced** (2026, Casey) — fresh packing; note
+  over-tight packing adds shaft drag (parasitic input power). Relevant to
+  any efficiency estimate from pre-2026 power data.
 - **Overload heaters upsized** — self-installed by Casey, sized from the
   motor's known amp draw; the pump guy approved the sizing. Fixed
   occasional drops at the high-flow end (consistent with the curve — line
