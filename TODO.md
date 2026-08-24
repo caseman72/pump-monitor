@@ -81,11 +81,11 @@ exactly how zone 1 relates to line 1.
 - [x] Furnas Class 69 pressure control (auto-off lever): low-pressure
       cutoff **20 psi**. Loop is **Pump → Furnas →
       ICE relay** in series (120 VAC, one leg of the starter loop). ICE Low
-      Trip = 20 psi to match. High cut-out setting still to confirm so the
+      Trip disabled (0) — the ICE guards the high side only. High cut-out setting still to confirm so the
       ICE High Trip is known to sit above it.
-- [x] ICE relay = debounced comparator with hysteresis (closed while
-      20 < p < 95; 5 s low / 3 s high opens, 2 s in-band re-closes), the
-      same behaviour as the Furnas. Starter is HAND–OFF–AUTO: start in HAND,
+- [x] ICE relay = debounced comparator with hysteresis, HIGH side only
+      (Low Trip 0 = disabled; low pressure is the Furnas's job): opens after
+      3 s ≥ 95 psi, re-closes after 2 s back in band. Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.

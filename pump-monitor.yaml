@@ -589,7 +589,9 @@ number:
 
   # ICE band: relay closed while Low Trip < p < High Trip. Below low for
   # 5 s or above high for 3 s opens it; back in band for 2 s re-closes it.
-  # Low Trip 20 psi matches the Furnas; 0 disables the low side.
+  # Low Trip defaults to 0 = DISABLED: the ICE is the HIGH-pressure guard;
+  # low pressure is the Furnas's job (20 psi) with the starter's thermal
+  # overloads behind it - no second device arguing about low pressure.
   # Pump -> Furnas -> Relay in series in the 120 VAC starter loop; the
   # starter's MANUAL position bypasses the circuit for starting.
   - platform: template
@@ -615,7 +617,7 @@ number:
     min_value: 0
     max_value: 50
     step: 1
-    initial_value: 20
+    initial_value: 0
     optimistic: true
     restore_value: true
     mode: box
