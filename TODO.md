@@ -78,6 +78,22 @@ the controller:
   ≤8-head-per-line goal) would land ~36-42 heads → meaningfully lower
   pressure; that's the case the recycle system actually has to manage.
 
+**Flow & efficiency (nozzles = 5/32" Rainbird ≈ 5.0 GPM/head @ 50 psi, clean):**
+- Measured operating points: line 1 ≈ 91 GPM @ 51.4 psi, line 4 ≈ 106 GPM @
+  50.3 psi (√P-corrected per-head flow; TDH = (gauge − 5 psi suction) × 2.31
+  ≈ 105-108 ft across all lines).
+- **Efficiency flag**: hydraulic power at line 1 = 91 GPM × 107 ft ÷ 3960 ≈
+  2.46 WHP ≈ 1.83 kW. Sense full-running input ≈ 4.7 kW → shaft ≈ 4.1 kW
+  (87% motor) → **pump efficiency ≈ 45%**, well below the ~73% the Goulds
+  curve claims at BEP. Two readings: either the pump runs far off BEP at
+  this operating point (not "near BEP" as the design notes had assumed), or
+  the impeller/wear rings have degraded and the real curve sits below
+  published (would also fit the 2022-2024 power drift). NOT a conclusion —
+  worth a proper efficiency check (a clean simultaneous GPM-by-catch-can +
+  psi + kW reading). If real, it also means the pressure "sweet spot" and
+  the BEP-based zone bands in section 1 should be re-derived from the pump's
+  actual curve, not the published one.
+
 **COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
 Deschutes River natural flows are dropping; COID is reducing deliveries to
 **~60% (fluctuating)** for patrons. Real operating constraint — less inflow
