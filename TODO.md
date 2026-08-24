@@ -27,6 +27,21 @@ revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
+> **DECISION 2026-08-24 — the ICE pump-kill relay is NOT being wired into
+> the pump loop this year, and maybe ever.** Rationale (Casey): the recycle
+> valves fail OPEN (toward the pond), so any valve failure pushes toward
+> more flow, never dead-head — the recycle system is inherently fail-safe
+> against overpressure, which is exactly what the ICE high-trip was for.
+> Meanwhile *stopping* the pump is itself the risky/expensive act (~$500 to
+> recover, per last year; the pump has been off only 2x all season) and
+> stresses the latching starter. So a pump-kill on overpressure trades a
+> safe failure mode for a dangerous one, while the Furnas + thermal
+> overloads already cover the low-side/overload cases. **The ICE stays
+> firmware-only: a monitoring/alert layer, relay never actuating the pump
+> loop.** Consequence: the ICE High Trip is just an ALERT threshold now,
+> not a kill point — its exact value (and the dead-head-margin/worn-pump
+> question) is no longer safety-critical.
+
 Today the ICE layer is a plain threshold: ≥ High Trip (95 psi) for 3 s →
 open the pump loop. The intended system is staged: the recycle valves
 absorb pressure first, and cutting the pump is only for the case where
@@ -147,10 +162,15 @@ the controller:
         the nozzle; e.g. avg 45 psi → ~5×√(45/50) ≈ 4.7 GPM/head.)
       · one gauge at the end only = the MINIMUM nozzle pressure (lower bound
         on flow) but still gives total pump→field loss.
-  - **Pump-off transducer check** (do first, it's free): with the corrected
-    1-ft suction geometry the pump-off gauge should read ~0.4 psi (≈0). If
-    it reads +8/−8 at zero flow, the transducer has an offset and every
-    pressure-derived number above shifts accordingly.
+  - ~~Pump-off transducer zero check~~ — DROPPED (Casey, 2026-08-24): at the
+    corrected 1-ft geometry the signal is ~0.4 psi, below the transducer's
+    useful resolution, so it can't reveal an 8 psi offset, and the line
+    drains below the pump and fades to zero anyway. Tells us nothing. And
+    for CONTROL the transducer's absolute accuracy barely matters — the
+    system reacts to changes and relative thresholds; an 8 psi consistent
+    offset just shifts the frame. Absolute accuracy only mattered for the
+    pump-curve efficiency comparison, which is now academic (pump kill is
+    not being wired — see the decision below).
 
 **COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
 Deschutes River natural flows are dropping; COID is reducing deliveries to
@@ -390,16 +410,13 @@ screenshot reading needed for future line runs.
       and swap in the proper new cap if it hasn't been done. (A weak/loaner
       cap would keep motor input slightly high — same signature as the
       pre-2025 drift, just smaller.)
-- [ ] **RE-CHECK the ICE High Trip (65 psi) before wiring the relay in.**
-      With the corrected suction geometry (+0.4 psi, not +5), published
-      dead-head at the gauge ≈ **65 psi** — so 65 psi High Trip sits right
-      AT dead-head, not 5 psi below it as previously assumed. And if the
-      pump is worn (measured efficiency ~49%), real shutoff is BELOW 65,
-      making the trip unreachable (never fires) — same failure as the old
-      80 psi setting. Fix: close the main valve slowly, watch the max
-      pressure the pump reaches = the true dead-head at the gauge, then set
-      High Trip a few psi below it. Until then the ICE high-side guard may
-      not actually protect.
+- [~] ICE High Trip is now an ALERT threshold only (relay not wired — see
+      the decision at the top of section 1), so its exact value is no longer
+      safety-critical. Left at 65 psi as a "pressure is unusually high"
+      notification. (If it's ever wired in future, first measure true
+      dead-head: close the main valve slowly, watch peak pressure, set the
+      trip a few psi below — because with the corrected +0.4 psi geometry,
+      published dead-head at the gauge ≈ 65, so 65 has no margin.)
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
 
