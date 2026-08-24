@@ -26,6 +26,12 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 Zones of **6, 6, 6, 7** heads; an optional **+2 per line** for the back
 yard. Separate from the C/D/E lines ("the other zones").
 
+Satellite view (`images/field-A-satellite.png`, local): the four lines are
+visible as light stripes running east–west across the field, with the
+**pond at the south edge, the pump house beside it** — so Field A is the
+field nearest the pump. West of the field is the bare ground and trench of
+"the back", the area the future automated lines (+2 per line) would cover.
+
 ## Field B — 3 zones (190 × 310 ft)
 
 Zones of **7, 7+1 = 8, 7** heads; **zones 2 + 3 currently run together
