@@ -112,10 +112,24 @@ sprinkler:
     valve_open_delay: 5s
     valves:
       - valve_switch: "Lawn Zone 1"
-        run_duration_number: "Lawn Zone 1 Duration"
+        run_duration_number:
+          name: "Lawn Zone 1 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_lawn1
       - valve_switch: "Lawn Zone 2"
-        run_duration_number: "Lawn Zone 2 Duration"
+        run_duration_number:
+          name: "Lawn Zone 2 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_lawn2
 
   # --- Field A: overlap so a line is never fully off (NOT wired yet) ---
@@ -125,16 +139,44 @@ sprinkler:
     valve_overlap: 5s
     valves:
       - valve_switch: "Field A Zone 1"
-        run_duration_number: "Field A Zone 1 Duration"
+        run_duration_number:
+          name: "Field A Zone 1 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_fielda1
       - valve_switch: "Field A Zone 2"
-        run_duration_number: "Field A Zone 2 Duration"
+        run_duration_number:
+          name: "Field A Zone 2 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_fielda2
       - valve_switch: "Field A Zone 3"
-        run_duration_number: "Field A Zone 3 Duration"
+        run_duration_number:
+          name: "Field A Zone 3 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_fielda3
       - valve_switch: "Field A Zone 4"
-        run_duration_number: "Field A Zone 4 Duration"
+        run_duration_number:
+          name: "Field A Zone 4 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          restore_value: true
         valve_switch_id: rel_fielda4
 
 sensor:
