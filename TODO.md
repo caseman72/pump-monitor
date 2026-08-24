@@ -62,7 +62,7 @@ Casey will do a quick run on each line (2026-08-24) to fill the table.
 | line 1 | 17 | 51.5 | 2026-08-23 | steady; ≈125 GPM on the curve (right of BEP) |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
 | line 3 | 19 | _pending_ | | predict ~49–50. (Dial read ~62 on 2026-08-19 with line 3 on — inconsistent with the pipe count; the dial's offset is evidently not a constant 8 psi. Ignore the dial.) |
-| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor (Casey: overloads trip when warranted; the original heaters dropped occasionally at the high-flow end, so they were upsized with the pump installer's OK — consistent with the curve. With bigger heaters there's less thermal margin, so the controller's pressure FLOOR (~46–48 psi at the gauge) is a real motor-protection constraint, not just an efficiency preference. Pump leads were also upsized 12 → 10 AWG (12 AWG is 20 A-rated vs ~23 A full load — hot leads + voltage drop = extra current = nuisance heater drops); the installer's clamp reading was somewhere in 20–30 A (not precisely recalled) — 87–130% of the 23.1 A nameplate, too wide to place on the curve. A fresh clamp reading, noted with which line/zone was running, is the one measurement that would pin the motor's real margin. A clamp-meter reading on line 4 + lawn zone 1 would still put a number on it) |
+| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor (Casey: overloads trip when warranted; the original heaters dropped occasionally at the high-flow end, so they were upsized with the pump installer's OK — consistent with the curve. With bigger heaters there's less thermal margin, so the controller's pressure FLOOR (~46–48 psi at the gauge) is a real motor-protection constraint, not just an efficiency preference. Pump leads were also upsized 12 → 10 AWG (12 AWG is 20 A-rated vs ~23 A full load — hot leads + voltage drop = extra current = nuisance heater drops); the installer's clamp reading was somewhere in 20–30 A (not precisely recalled) — 87–130% of the 23.1 A nameplate, too wide to place on the curve. A fresh clamp reading, noted with which line/zone was running, is the one measurement that would pin the motor's real margin. A clamp-meter reading on line 4 + lawn zone 1 would still put a number on it. Same maintenance visit also added the pump's **HAND-OFF-AUTO selector relay** (new — this is why the HOA switch exists at all) and upgraded the leads to 10 AWG. Casey: total bill ~$500 for what was fundamentally a $20 switch — most of the cost was diagnosis/labor, not parts.) |
 
 ### Lawn zone deltas (measured on line 1)
 
@@ -165,7 +165,9 @@ Findings:
     reflects the OLD capacitor's degradation — a capacitor typically only
     gets swapped when it tests bad or the pump shows symptoms (hard
     starting, humming, high draw), which corroborates the hypothesis
-    rather than just being consistent with it. No pump-only CT data exists
+    rather than just being consistent with it — **confirmed, not just
+    inferred: the old cap tested a bit low on capacitance (Casey)**. No
+    pump-only CT data exists
     from after the swap (Sense moved to whole-house Jan 2025) to directly
     confirm power dropped back down; if a CT ever goes back on the pump
     circuit (or Sense Flex in Dedicated Circuit mode - see the monitoring
