@@ -1015,13 +1015,13 @@ interval:
           }
           if (id(ice_tripped)) {
             // Verify the trip took: pressure is the feedback. Pump still
-            // running 60 s after the loop was commanded open = relay failed.
+            // running 120 s after the loop was commanded open = relay failed.
             float pt = id(pump_pressure).state;
             bool live = !isnan(pt) && pt > 10.0f;
             if (live) {
-              if (++id(ice_live_count) >= 60 && !id(ice_trip_failed)) {
+              if (++id(ice_live_count) >= 120 && !id(ice_trip_failed)) {
                 id(ice_trip_failed) = true;
-                ESP_LOGE("ice", "TRIP FAILED - pump still running 60 s after trip; check relay / swap selector");
+                ESP_LOGE("ice", "TRIP FAILED - pump still running 120 s after trip; check relay / swap selector");
               }
             } else {
               id(ice_live_count) = 0;

@@ -34,6 +34,15 @@ Design notes:
   deadband (±1–2 psi) and a minimum interval between steps (30 s+) so it
   doesn't hunt — the valve's authority is all in pulse counts ~1–6.
 
+## 1a. Pressure observations (feedforward table data)
+
+Recycle valves closed unless noted. Transducer-calibrated psi.
+
+| Date | Running | psi | Notes |
+|---|---|---:|---|
+| 2026-08-23 | irrigation line 1 (smallest long line) | 51.5 | steady |
+| 2026-08-23 | line 1 + house zone 1 (front lawn) | 47.4 | −4 psi from one residential zone; steady ±0.1 |
+
 ## 2. ICE wiring & policy decisions (open)
 
 - [ ] Wire the ICE relay into the pump loop. **NC energize-to-trip

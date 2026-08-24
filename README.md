@@ -169,7 +169,7 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
   - **Feedback is pressure, not a contact**: the loop is 120 VAC and the
     transducer already reports the truth — no pressure, no pump. **Pump
     Running** (> 10 psi) is the derived state. After a trip, if the pump is
-    still running 60 s later the relay didn't open the loop → **ICE Trip
+    still running 120 s later the relay didn't open the loop → **ICE Trip
     Failed** and "TRIP FAILED … swap selector" in ICE Status. (Until the
     module is actually wired into the pump loop, every trip test will
     report TRIP FAILED — that's the check working.)
