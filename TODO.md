@@ -112,6 +112,36 @@ pump zones sit right at the service-factor limit (why the original heaters
 dropped). Curve predictions (4.55–4.9 kW) matched the plateau band.
 Energy ≈ 4.7 kW × 24 h ≈ 113 kWh/day.
 
+### Historical Sense data (2022–2024), pulled via API 2026-08-23
+
+Sense's Home app UI only shows one hover value at a time; pulled the raw
+hourly `[min,max]` W series directly from `api.sense.com` for every day the
+CTs were on the pump — 418 days (Sep–Oct 2022, May–Oct 2023, May–Oct 2024,
+per Casey; whole-house from Jan 2025) — saved locally as
+`~/Downloads/sense-pump-usage-2022-2024.json` (**not committed** — it's raw
+household energy data, kept out of the public repo).
+
+Findings:
+- **The ~9 AM daily line switch is independently confirmed**: across 332
+  clean days, the single largest hour-to-hour jump falls in the 8–11 AM
+  window 47% of the time (156/332) — matches Casey's rotation timing with
+  no prompting.
+- **Steady-state power is one continuous spread, not four separable
+  clusters**: even isolating pure overnight readings (midnight–4 am, one
+  line only, before any pump/lawn zone), the histogram spans 4212–5450 W
+  with no gaps. Too much other variance (season, pond level, year-over-year
+  drift) sits on top of the four lines to reverse-engineer "this watt value
+  = this line" from history — **today's/tomorrow's live per-line readings
+  are the trustworthy source for that mapping, not this archive.**
+- **Real finding — year-over-year upward drift** on the same pump, same
+  lines: median steady-state power 2022 → 2023 → 2024 = **4429 → 4583 →
+  4657 W** (+228 W / +5% over 2 years). Consistent with impeller wear or
+  pipe fouling raising the system friction curve. Worth tracking in 2025+:
+  a continuing climb would be an early wear signal worth acting on before
+  failure.
+- One anomaly day (2024-09-11) shows two mid-day power steps instead of the
+  usual single AM/PM split — a one-off event, not a mapping error.
+
 ### Pump zones (mornings)
 
 | Pump zone | psi observed | Delta vs line base | Date |
