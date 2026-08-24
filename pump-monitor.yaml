@@ -174,6 +174,17 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'false'
+  # After a trip: pressure should collapse. If the pump is still running
+  # 60 s later, the relay did not open the loop (dead relay / wiring) ->
+  # trip_failed, and the operator should swap the REL5/REL6 selector.
+  - id: ice_trip_failed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ice_live_count
+    type: int
+    restore_value: no
+    initial_value: '0'
   - id: ice_high_count
     type: int
     restore_value: no
@@ -503,6 +514,8 @@ button:
           id(ice_tripped) = false;
           id(ice_trip_reason) = "";
           id(ice_test_latched) = "";
+          id(ice_trip_failed) = false;
+          id(ice_live_count) = 0;
           id(ice_low_armed) = false;
           id(ice_high_count) = 0;
           id(ice_low_count) = 0;
@@ -948,6 +961,24 @@ binary_sensor:
     icon: "mdi:alert-octagon"
     lambda: 'return id(ice_tripped);'
 
+  - platform: template
+    name: "ICE Trip Failed"
+    device_class: problem
+    icon: "mdi:alert-decagram"
+    lambda: 'return id(ice_trip_failed);'
+
+  # The real feedback for the whole ICE chain: pressure. No pressure = no
+  # pump. (> 10 psi with 5 s hysteresis.)
+  - platform: template
+    name: "Pump Running"
+    id: pump_running
+    device_class: running
+    icon: "mdi:pump"
+    lambda: 'return !isnan(id(pump_pressure).state) && id(pump_pressure).state > 10.0f;'
+    filters:
+      - delayed_on: 5s
+      - delayed_off: 5s
+
 text_sensor:
   - platform: template
     name: "ICE Status"
@@ -983,7 +1014,22 @@ interval:
             return;
           }
           if (id(ice_tripped)) {
-            set_status("TRIPPED " + id(ice_trip_reason));
+            // Verify the trip took: pressure is the feedback. Pump still
+            // running 60 s after the loop was commanded open = relay failed.
+            float pt = id(pump_pressure).state;
+            bool live = !isnan(pt) && pt > 10.0f;
+            if (live) {
+              if (++id(ice_live_count) >= 60 && !id(ice_trip_failed)) {
+                id(ice_trip_failed) = true;
+                ESP_LOGE("ice", "TRIP FAILED - pump still running 60 s after trip; check relay / swap selector");
+              }
+            } else {
+              id(ice_live_count) = 0;
+            }
+            if (id(ice_trip_failed))
+              set_status("TRIP FAILED - pump still running after " + id(ice_trip_reason) + " - check relay / swap selector");
+            else
+              set_status("TRIPPED " + id(ice_trip_reason) + (live ? " (pump still running)" : " (pump stopped)"));
             return;
           }
           float v = id(pressure_volts).state;

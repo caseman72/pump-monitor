@@ -166,6 +166,13 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
     the loop ~1 s — fatal on a latching starter). `"false"` = loop through
     **NC**, relay energized only to trip — reboots, crashes and a dead
     controller leave the pump running. **NC is the recommended wiring.**
+  - **Feedback is pressure, not a contact**: the loop is 120 VAC and the
+    transducer already reports the truth — no pressure, no pump. **Pump
+    Running** (> 10 psi) is the derived state. After a trip, if the pump is
+    still running 60 s later the relay didn't open the loop → **ICE Trip
+    Failed** and "TRIP FAILED … swap selector" in ICE Status. (Until the
+    module is actually wired into the pump loop, every trip test will
+    report TRIP FAILED — that's the check working.)
   - The valve dead-man timer and STOP All never touch these relays.
 - **STOP All** — valve relays off immediately (does not touch the ICE
   relay); **Restart** — reboot the ESP; **ICE Reset** — clear a latched trip
