@@ -74,9 +74,10 @@ exactly how zone 1 relates to line 1.
 
 ## 2. ICE wiring & policy decisions (open)
 
-- [ ] Wire the ICE relay into the pump loop. **NC energize-to-trip
-      recommended** (`ice_run_energized: "false"`): reboots, crashes, dead
-      controller all leave the latching starter loop closed.
+- [ ] Wire the ICE relay into the pump loop. **NO contact, energized = loop
+      closed** (decided 2026-08-18, fail-stop). Reboot/OTA blip eliminated
+      by the local pca9554 override (2026-08-23) — verify on the bench:
+      the module's relay LED must stay lit through a Restart.
 - [x] Furnas pressure switch **cuts out at 10 psi** (confirmed 2026-08-23);
       that's the hardware floor under the ICE Low Trip (20) and the
       `Pump Running` threshold (> 10). Cut-in / high-side setting still to

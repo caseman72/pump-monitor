@@ -112,6 +112,13 @@ ota:
 logger:
   level: INFO
 
+# Local override of the pca9554 component (components/pca9554): preserves
+# the expander's outputs at init so the ICE relay never blips on reboot/OTA.
+external_components:
+  - source:
+      type: local
+      path: components
+
 i2c:
   sda: 6
   scl: 7

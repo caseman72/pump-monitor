@@ -169,11 +169,13 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
     close the main valve slowly to prove it with zero risk.
   - **Control Wiring Relay Select** picks REL5 or REL6 (spare swap without a
     reflash); changes are make-before-break.
-  - Polarity is the `ice_run_energized` substitution. `"true"` = loop through
-    the module's **NO** contact, relay energized to run (an ESP reboot drops
-    the loop ~1 s — fatal on a latching starter). `"false"` = loop through
-    **NC**, relay energized only to trip — reboots, crashes and a dead
-    controller leave the pump running. **NC is the recommended wiring.**
+  - **Wiring: NO contact, relay energized = loop closed** (decided
+    2026-08-18, fail-stop: if the control board loses power it can no longer
+    monitor pressure, so the pump stops). `ice_run_energized: "true"`.
+    Reboots and OTA do **not** blip the relay: the PCA9557 keeps its
+    outputs through an ESP reset, and the local `components/pca9554`
+    override preserves them at init instead of ESPHome's stock
+    all-outputs-low initialisation.
   - **Feedback is pressure, not a contact**: the loop is 120 VAC and the
     transducer already reports the truth — no pressure, no pump. **Pump
     Running** (> 10 psi) is the derived state. After a trip, if the pump is
@@ -219,6 +221,8 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
 - `pump-monitor.yaml` — production firmware (two valves, ICE relay, pressure)
 - `valve_math.h` — flow↔position table and pulse-counter math shared by
   both valves and both positioning modes
+- `components/pca9554/` — local override of ESPHome's expander driver that
+  preserves relay states across reboot/OTA (keeps the ICE loop closed)
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
