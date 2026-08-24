@@ -111,11 +111,18 @@ the controller:
   curve claims at BEP. Two readings: either the pump runs far off BEP at
   this operating point (not "near BEP" as the design notes had assumed), or
   the impeller/wear rings have degraded and the real curve sits below
-  published (would also fit the 2022-2024 power drift). NOT a conclusion —
-  worth a proper efficiency check (a clean simultaneous GPM-by-catch-can +
-  psi + kW reading). If real, it also means the pressure "sweet spot" and
-  the BEP-based zone bands in section 1 should be re-derived from the pump's
-  actual curve, not the published one.
+  published. **This is separate from the year-over-year power drift** — that
+  trend is the (now-replaced) capacitor, a MOTOR/electrical loss; this ~49%
+  is PUMP/hydraulic efficiency (water power out ÷ shaft power in), which a
+  capacitor can't cause. If anything the bad 2024 cap makes this estimate a
+  slight UNDER-count (a worse-than-assumed motor efficiency means real shaft
+  power was lower, so real pump efficiency is a bit higher than 49% — call
+  it ~52%, still well short of 73%). NOT a conclusion — the number is rough
+  (generic published curve, assumed 87% motor efficiency, static-suction
+  approximation). Worth a proper check: a clean simultaneous GPM-by-catch-can
+  + psi + kW reading. If real off-BEP/wear is confirmed, the pressure "sweet
+  spot" and the BEP-based zone bands in section 1 should be re-derived from
+  the pump's actual curve, not the published one.
 
 **COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
 Deschutes River natural flows are dropping; COID is reducing deliveries to
