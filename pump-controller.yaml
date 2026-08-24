@@ -1,0 +1,162 @@
+# Pump Controller - sprinkler node - ESP32-C6-DevKitC in a Canaduino ESP32
+# PLC-100 V1 (a SECOND board, separate from pump-monitor which runs the
+# recycle valves + ICE). This board runs standard 24 VAC solenoid zones via
+# the ESPHome native sprinkler component.
+#
+# Two controllers on the one board (docs/sprinkler-component-notes.md):
+#   Lawn controller  - the 2 pump-house lawn zones, REL1/REL2.
+#     valve_open_delay > 0: current zone turns OFF, gap, next turns ON.
+#     (These are the dead-head stress-test zones per the roadmap - open,
+#      close, open, close, off - so a clean gap between them is what we want.)
+#   Field-A controller - 4 zones, REL3-REL6. NOT WIRED YET (lots of digging
+#     to do). valve_overlap > 0: next line opens BEFORE the current closes,
+#     so a line is never completely off (no dead-head at transitions).
+#
+# Solenoids are standard 24 VAC (plain GPIO relays, no H-bridge). No display.
+#
+# Relays: PCA9557 I2C expander @ 0x1A -> ULN2003 (IO1..IO6). Same board/
+# pinout as pump-monitor.
+#
+# Upload:  ./upload.sh <this-board-ip> pump-controller.yaml
+# (upload.sh injects secrets from secrets.h; pass the board's own IP since
+#  DEVICE_IP in secrets.h defaults to the pump-monitor board.)
+
+substitutions:
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ap_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+  api_key: "PLACEHOLDER"
+
+esphome:
+  name: pump-controller
+  friendly_name: Pump Controller
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  power_save_mode: NONE
+  reboot_timeout: 15min
+  ap:
+    ssid: "Pump-Controller"
+    password: ${ap_password}
+
+captive_portal:
+
+api:
+  encryption:
+    key: ${api_key}
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: INFO
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
+  - id: relay_expander
+    address: 0x1A
+
+# Raw relay outputs -> 24 VAC solenoids. Internal: the sprinkler component
+# drives these via valve_switch_id; HA sees the sprinkler "zone" switches,
+# not these raw relays.
+switch:
+  - platform: gpio
+    id: rel_lawn1
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 1, mode: OUTPUT}
+  - platform: gpio
+    id: rel_lawn2
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 2, mode: OUTPUT}
+  - platform: gpio
+    id: rel_fielda1
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 3, mode: OUTPUT}
+  - platform: gpio
+    id: rel_fielda2
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 4, mode: OUTPUT}
+  - platform: gpio
+    id: rel_fielda3
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 5, mode: OUTPUT}
+  - platform: gpio
+    id: rel_fielda4
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 6, mode: OUTPUT}
+
+sprinkler:
+  # --- Pump-house lawn: gap between zones (off, then on) ---
+  - id: lawn_controller
+    main_switch: "Lawn"
+    auto_advance_switch: "Lawn Auto Advance"
+    valve_open_delay: 5s
+    valves:
+      - valve_switch: "Lawn Zone 1"
+        run_duration_number: "Lawn Zone 1 Duration"
+        valve_switch_id: rel_lawn1
+      - valve_switch: "Lawn Zone 2"
+        run_duration_number: "Lawn Zone 2 Duration"
+        valve_switch_id: rel_lawn2
+
+  # --- Field A: overlap so a line is never fully off (NOT wired yet) ---
+  - id: fielda_controller
+    main_switch: "Field A"
+    auto_advance_switch: "Field A Auto Advance"
+    valve_overlap: 5s
+    valves:
+      - valve_switch: "Field A Zone 1"
+        run_duration_number: "Field A Zone 1 Duration"
+        valve_switch_id: rel_fielda1
+      - valve_switch: "Field A Zone 2"
+        run_duration_number: "Field A Zone 2 Duration"
+        valve_switch_id: rel_fielda2
+      - valve_switch: "Field A Zone 3"
+        run_duration_number: "Field A Zone 3 Duration"
+        valve_switch_id: rel_fielda3
+      - valve_switch: "Field A Zone 4"
+        run_duration_number: "Field A Zone 4 Duration"
+        valve_switch_id: rel_fielda4
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    ssid:
+      name: "WiFi Network"
+      entity_category: diagnostic
+
+button:
+  - platform: restart
+    name: "Restart"
+    icon: "mdi:restart"

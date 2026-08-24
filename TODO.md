@@ -414,7 +414,7 @@ Findings:
 
 | Pump zone | psi | Delta vs 51.7 baseline | Ran | Date |
 |---|---:|---:|---|---|
-| pump zone 1 | 47.3 | −4.4 | 05:50–06:05 (~15 min) | 2026-08-24, from the HA recorder DB |
+| pump zone 1 | 47.3 | −4.4 | 05:50–06:05 (~15 min) | 2026-08-24, recorder; order confirmed by Casey |
 | pump zone 2 | 47.9 | −3.8 | 06:05–06:20 (~15 min) | 2026-08-24 |
 
 Brief transition dip to ~43 psi at the zone 1 → zone 2 switch (valve
