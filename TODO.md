@@ -37,11 +37,18 @@ Design notes:
 ## 1a. Pressure observations (feedforward table data)
 
 Recycle valves closed unless noted. Transducer-calibrated psi.
+Naming: **house zones 1–4** (residential lawn, evenings) and **pump zones
+1–2** (irrigation, mornings ~5–6 am); **line N** = the long irrigation lines.
 
 | Date | Running | psi | Notes |
 |---|---|---:|---|
 | 2026-08-23 | irrigation line 1 (smallest long line) | 51.5 | steady |
 | 2026-08-23 | line 1 + house zone 1 (front lawn) | 47.4 | −4 psi from one residential zone; steady ±0.1 |
+| 2026-08-23 | line 1 + house zone 2 | _pending_ | house system has 4 zones, cycles 1→4 |
+| 2026-08-23 | line 1 + house zone 3 | _pending_ | |
+| 2026-08-23 | line 1 + house zone 4 | _pending_ | |
+| 2026-08-24 | line 1 + pump zone 1 | _pending_ | morning run ~5–6 am — read from HA history |
+| 2026-08-24 | line 1 + pump zone 2 | _pending_ | |
 
 ## 2. ICE wiring & policy decisions (open)
 
