@@ -234,19 +234,24 @@ Findings:
 
 ### Pump zones (mornings)
 
-| Pump zone | psi observed | Delta vs ~51.7 baseline | Duration | Date |
-|---|---:|---:|---:|---|
-| pump zone 1 | 47.2 | −4.5 | ~20 min | 2026-08-24, 5:47–6:07am, from HA history |
-| pump zone 2 | 47.8 | −3.9 | ~79 min | 2026-08-24, 6:08–7:27am — ~4x longer than zone 1 |
+| Pump zone | psi | Delta vs 51.7 baseline | Ran | Date |
+|---|---:|---:|---|---|
+| pump zone 1 | 47.3 | −4.4 | 05:50–06:05 (~15 min) | 2026-08-24, from the HA recorder DB |
+| pump zone 2 | 47.9 | −3.8 | 06:05–06:20 (~15 min) | 2026-08-24 |
 
-Brief transition dip to ~43 psi at the zone1→zone2 switch (~6:07–6:08am,
-valve-switching transient, not sustained).
+Brief transition dip to ~43 psi at the zone 1 → zone 2 switch (valve
+switching transient, ~10 s, not sustained). Baseline was back at 51.7 from
+06:20 until the lawn cycle at 07:27. (An earlier screenshot-based reading
+had pump zone 2 running 79 min — a misread; the recorder shows ~15 min.)
 
-**Lawn zone cross-check (same morning, 7:36am onward)**: lawn zone 1 read
-~47.6 psi (vs 47.4 psi the evening before) and lawn zone 2 read **48.5 psi
-— identical to the tenth** against the previous evening's reading. Strong
-confirmation the zone deltas are stable and time-of-day independent, good
-grounds to trust them for the feedforward table.
+**Lawn zone cross-check, same morning (recorder)**: lawn zone 1 07:28–07:52
+= **47.6 psi** (47.4 the evening before), lawn zone 2 07:52–08:14+ =
+**48.6 psi** (48.5 the evening before). Repeatable to ~0.1–0.2 psi across
+12+ hours — solid grounds to trust the deltas for the feedforward table.
+
+Numbers now come straight from HA's recorder via `tools/ha_pressure.py`
+(read-only query over ssh to machone, sustained-plateau detection); no more
+screenshot reading needed for future line runs.
 
 ## 2. ICE wiring & policy decisions (open)
 
