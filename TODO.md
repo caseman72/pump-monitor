@@ -55,14 +55,14 @@ Line data (pipe sections, each with a sprinkler): 1 = 6+8+2 = **17**,
 2 = 6+8+3 = **17**, 3 = 6+8+5 = **19**, 4 = 6+8+6 = **21**. More pipes =
 more flow = lower pressure. Rotation **3 → 1 → 4 → 2** (changes ~9 am;
 avoids double watering). Curve-based predictions in the last column —
-replace with transducer readings as each line comes up.
+Casey will do a quick run on each line (2026-08-24) to fill the table.
 
 | Line | Pipes | Base psi | Date | Notes / prediction |
 |---|---:|---:|---|---|
 | line 1 | 17 | 51.5 | 2026-08-23 | steady; ≈125 GPM on the curve (right of BEP) |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
 | line 3 | 19 | _pending_ | | predict ~49–50. (Dial read ~62 on 2026-08-19 with line 3 on — inconsistent with the pipe count; the dial's offset is evidently not a constant 8 psi. Ignore the dial.) |
-| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with an evening lawn zone on top, ~43–45 → ~150+ GPM = **5 HP motor at/over full load** — the likely source of the occasional overload trips. A clamp-meter reading on line 4 + lawn zone 1 would confirm |
+| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with an evening lawn zone on top, ~43–45 → ~150 GPM ≈ 5 HP motor near full load per the curve (Casey: there are NO overload trips in practice — so either the curve placement is a little optimistic on flow, or the 1.15 service factor covers it; a clamp-meter reading on line 4 + lawn zone 1 would show which) |
 
 ### Lawn zone deltas (measured on line 1)
 
