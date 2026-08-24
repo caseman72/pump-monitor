@@ -59,9 +59,9 @@ Casey will do a quick run on each line (2026-08-24) to fill the table.
 
 | Line | Pipes | Base psi | Date | Notes / prediction |
 |---|---:|---:|---|---|
-| line 1 | 17 | 51.5 | 2026-08-23 | steady; ≈125 GPM on the curve (right of BEP) |
+| line 1 | 17 | 51.5–51.7 | 2026-08-23/24 | steady; ≈125 GPM on the curve (right of BEP). 51.7 re-confirmed 2026-08-24 05:30–05:50 and 06:20–07:27 |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
-| line 3 | 19 | _pending_ | | predict ~49–50. (Dial read ~62 on 2026-08-19 with line 3 on — inconsistent with the pipe count; the dial's offset is evidently not a constant 8 psi. Ignore the dial.) |
+| line 3 | 19 | **49.9** | 2026-08-24 08:18– (recorder) | predicted ~49–50 ✓. −1.8 vs line 1. (The dial's ~62 on 2026-08-19 was wrong — its offset is not a constant; ignore the dial.) |
 | line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor — see maintenance history below for why there's margin here |
 
 ### Pump maintenance history (for context on motor margin)
