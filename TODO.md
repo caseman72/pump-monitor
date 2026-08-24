@@ -62,7 +62,7 @@ exactly how zone 1 relates to line 1.
 |---|---:|---:|---|
 | zone 1 (front) | 47.4 | −4.1 | 2026-08-23 |
 | zone 2 | 48.5 | −3.0 | 2026-08-23 |
-| zone 3 | _pending_ | | |
+| zone 3 | 49.8 | −1.7 | 2026-08-23 |
 | zone 4 | _pending_ | | |
 
 ### Pump zones (mornings)
