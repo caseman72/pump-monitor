@@ -159,10 +159,16 @@ Findings:
     out of the 208-230V-rated tolerance band.
   Worth tracking in 2025+: a continuing climb is the signal to act on
   before something fails outright.
-  - 2024-09-11's double switch (9am + an extra ~8pm switch, back to a
-    lower plateau) is confirmed against the real Sense UI chart, not just
-    a hover artifact — Casey: "looks clean" (no outage, just an extra
-    event that evening).
+  - **Correction (2026-08-24): Sep 11 is NOT anomalous — retracting the
+    earlier "anomaly" framing.** Casey asked directly how it differs from
+    other days; running the same "second sustained plateau" detector
+    across the full 418-day archive found **227 similar events** — a
+    second multi-hour power step on top of the normal ~9am rotation,
+    roughly every 1–2 days, all three years. Sep 6 (5 days before Sep 11,
+    same week) shows the identical shape. This is the system's normal
+    behavior — most likely evening lawn-zone watering blocks running
+    several hours — not a special event. Sep 11 was only the day I
+    happened to look at first.
 - One anomaly day (2024-09-11) shows two mid-day power steps instead of the
   usual single AM/PM split — a one-off event, not a mapping error.
 
