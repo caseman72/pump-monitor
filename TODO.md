@@ -80,9 +80,11 @@ curve slope near the operating point (~0.2–0.25 psi per GPM).
 
 ### Motor load via Sense (whole-house energy monitor)
 
-Clamping the leads means opening the panel, so use Sense instead: pump
-OFF → note the house baseline; run each line with big loads (microwave
-etc.) off → the delta is the pump's input power. Nameplate full load ≈
+Clamping the leads means opening the panel. Sense can't fingerprint the
+pump (24/7 load, lives in "Always On"), so use the **whole-house total**:
+pump OFF (HAND→OFF for a minute, house quiet) → baseline; each line
+running → the delta is the pump's input power. Line-to-line deltas
+(~0.3–0.4 kW between line 1 and line 4) work without a pump-off. Nameplate full load ≈
 23.1 A × 230 V × 0.92 PF ≈ **4.9 kW** (amps ≈ W ÷ 212).
 
 | Running | Predicted input | Motor load |
@@ -149,6 +151,10 @@ Measured: _pending_
 
 ## 5. Calibration & sensors
 
+- [ ] Pump power monitoring: a CT on the pump feed so HA sees motor load
+      directly — Shelly EM / Emporia on that circuit, or a 0–10 V CT
+      transducer into the PLC's spare AI2. Gives the staged controller a
+      real motor-load floor instead of inferring it from pressure.
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
 - [ ] Measure Valve 2's Full Travel Time after install
 - [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
