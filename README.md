@@ -190,3 +190,7 @@ then delete the `OTA_OLD_PASSWORD` line.
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
+
+## License
+
+MIT
