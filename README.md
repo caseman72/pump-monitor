@@ -187,19 +187,8 @@ then delete the `OTA_OLD_PASSWORD` line.
 
 ## TODO
 
-- [ ] Pressure control automation using Pulse Position increment/decrement
-      (feedforward table per irrigation line + slow PI trim, 55 psi setpoint)
-- [ ] Recycle failsafe: when zone solenoids are automated, open Valve 1 to
-      ~15% if the HA/API connection is lost (keeps the 5 HP pump cool)
-- [ ] Wire the ICE relay into the pump loop (NC recommended) and run the
-      Test Mode exercise at a ~60 psi threshold first
-- [ ] Sprinkler node: second PLC-100, 24 VAC solenoids, 2–3 zones now (+4
-      later); open-next-before-close-previous sequencing
-- [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
-- [ ] Measure Valve 2's Full Travel Time after install
-- [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
-- [ ] Confirm calibration on the real pump once plumbed in (~60 psi static,
-      so the faucet numbers should transfer)
+See [TODO.md](TODO.md) — including the staged pressure-response design
+(Green / Yellow / Red / DEFCON 1) that will replace the flat ICE threshold.
 
 ## Repo files
 
@@ -209,6 +198,7 @@ then delete the `OTA_OLD_PASSWORD` line.
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
+- `TODO.md` — open work and the staged pressure-response design
 
 ## License
 
