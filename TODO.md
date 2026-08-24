@@ -137,6 +137,28 @@ pump zones sit right at the service-factor limit (why the original heaters
 dropped). Curve predictions (4.55–4.9 kW) matched the plateau band.
 Energy ≈ 4.7 kW × 24 h ≈ 113 kWh/day.
 
+### Season cost estimate vs. Casey's actual 2025 tracking
+
+- Confirmed from the archive: water is off **Oct 15** every year (Casey) —
+  visible directly in the data as a wall of Sense `-1` "no data" hours
+  starting right at Oct 15 in both 2022 and 2024 archives. Season is
+  **May 1 – Oct 15 (~168 days)**, not the full May–Oct calendar months.
+  Mid-season `-1` blips (a handful of hours here and there, ~15 instances
+  across the archive) are real short pump-stop events, already correctly
+  excluded by the "full 24h ≥3500W" day filter used for the averages below.
+- Full-running-day averages by year (same filter as the kWh/day figures
+  above), May 1–Oct 15 only: **2022 = 108.9, 2023 = 112.2, 2024 = 114.0
+  kWh/day**.
+- At Casey's rate (**8.66 c/kWh**): 180-day season cost ≈ **$1,698 (2022)
+  / $1,750 (2023) / $1,778 (2024)**.
+- **Casey's actual 2025 spreadsheet: $1,558.80 over 180 days** — implies
+  ~100.0 kWh/day, *below every archived year including 2022*. Consistent
+  with (not proof of) the July 2025 capacitor replacement pulling the
+  second half of the season down enough to drag the whole-season average
+  under the pre-drift baseline — the right direction and roughly the
+  right size for the capacitor-aging theory, though weather/schedule
+  differences could also contribute.
+
 ### Historical Sense data (2022–2024), pulled via API 2026-08-23
 
 Sense's Home app UI only shows one hover value at a time; pulled the raw
