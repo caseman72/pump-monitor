@@ -1,0 +1,133 @@
+# Test node - ESP32-C6-DevKitC seated in a Canaduino ESP32 PLC-100 V1
+# (the C6 carrier, NOT the Nano PLC-100 V2 the gate/house nodes use).
+#
+# Purpose: bench-test PC817 optocoupler card output drive into a PLC opto DI
+# before committing the 24V variant to DKS terminal 18 (DESIGN.md, BOM.md).
+# Wiring under test (card VCC/GND and signals all from the PLC 5V terminal):
+#   REL1 contact -> card A input; card A OUT (1k pull-up to 5V) -> DI1
+#   REL3 contact -> card B input; card B OUT (bare 10k on-card)  -> DI3
+# Expected: relay ON -> card LED on -> OUT pulled LOW -> DI off (inverted
+# sense). Relay OFF -> OUT high via pull-up -> does the DI opto get enough
+# current? 10k gives ~0.3 mA (probably not); 1k gives ~2 mA (should).
+#
+# Board port map (from "ESP32 PLC 100 V1_SCH.pdf" in this directory):
+#   DI:      D1=GPIO4  D2=GPIO5  D3=GPIO10  D4=GPIO11
+#   AI:      A1=GPIO0  A2=GPIO1  A3=GPIO2   A4=GPIO3
+#   AO:      AO1=GPIO18 ... AO4=GPIO21
+#   Relays:  Q1-Q6 via PCA9557 I2C expander @ 0x1A -> ULN2003
+#            (relays on IO1..IO6 - IO0 is the PCA9557 open-drain pin, designer skipped it; verified by click test 2026-07-28)
+#   I2C:     DS3231 RTC @ 0x68 on same bus; SDA/SCL GPIO guessed 6/7 -
+#            i2c scan on boot must find 0x1A + 0x68, else swap pins
+#
+# Power: 12-24V on the board supply terminals (relay coils run from the
+# onboard 5V buck). USB simultaneously is fine - no LoRa on this rig.
+substitutions:
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+
+esphome:
+  name: test-node
+  friendly_name: Test Node
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+
+api:    # unencrypted - bench rig only
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: DEBUG   # boot log shows the i2c scan results + every DI edge
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+pca9554:   # PCA9557 - same register map; address from schematic
+  - id: relay_expander
+    address: 0x1A
+
+switch:
+  - platform: gpio
+    name: "REL1 (card A drive)"
+    pin:
+      pca9554: relay_expander
+      number: 1
+      mode: OUTPUT
+  - platform: gpio
+    name: "REL2"
+    pin:
+      pca9554: relay_expander
+      number: 2
+      mode: OUTPUT
+  - platform: gpio
+    name: "REL3 (card B drive)"
+    pin:
+      pca9554: relay_expander
+      number: 3
+      mode: OUTPUT
+  - platform: gpio
+    name: "REL4"
+    pin:
+      pca9554: relay_expander
+      number: 4
+      mode: OUTPUT
+  - platform: gpio
+    name: "REL5"
+    pin:
+      pca9554: relay_expander
+      number: 5
+      mode: OUTPUT
+  - platform: gpio
+    name: "REL6"
+    pin:
+      pca9554: relay_expander
+      number: 6
+      mode: OUTPUT
+
+# All four DIs exposed: DI2/DI4 are unwired references (their idle state
+# reveals the input stage's resting polarity).
+binary_sensor:
+  - platform: gpio
+    name: "DI1 (card A, 1k)"
+    pin:
+      number: 4
+      mode: INPUT
+    filters:
+      - delayed_on: 20ms
+      - delayed_off: 20ms
+  - platform: gpio
+    name: "DI2 (unwired ref)"
+    pin:
+      number: 5
+      mode: INPUT
+    filters:
+      - delayed_on: 20ms
+      - delayed_off: 20ms
+  - platform: gpio
+    name: "DI3 (card B, bare)"
+    pin:
+      number: 10
+      mode: INPUT
+    filters:
+      - delayed_on: 20ms
+      - delayed_off: 20ms
+  - platform: gpio
+    name: "DI4 (unwired ref)"
+    pin:
+      number: 11
+      mode: INPUT
+    filters:
+      - delayed_on: 20ms
+      - delayed_off: 20ms

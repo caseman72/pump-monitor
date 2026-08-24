@@ -1,0 +1,330 @@
+# Valve timing rig - ESP32-C6-DevKitC in the Canaduino ESP32 PLC-100 V1
+# (same board as test-node.yaml; this config replaces it for the valve test).
+#
+# Motorized valve wired to the relay contacts:
+#   REL1 (PCA9557 IO1) -> CLOSE drive
+#   REL2 (PCA9557 IO2) -> OPEN drive
+#
+# Goal: measure the true open/close travel time (bench estimate ~4 s).
+# Two ways to time it from HA:
+#
+#   1. Manual (hold-style): toggle "Valve Open" ON, watch the valve, toggle
+#      OFF (or hit STOP) the moment it reaches the stop. "Valve Elapsed"
+#      ticks live every 100 ms; "Last Open Time" / "Last Close Time" latch
+#      the duration of the last actuation.
+#
+#   2. Timed pulse (for zeroing in): set "Pulse Time", press "Pulse Open"
+#      or "Pulse Close" - the relay energizes for exactly that long, then
+#      drops. Bisect: fully opened at 3.6 s but not 3.4 s -> answer ~3.5 s.
+#
+# Interlock keeps REL1/REL2 from ever being on together (300 ms dead time
+# when reversing). A 20 s safety timeout drops both relays if you walk away
+# or Wi-Fi/HA drops mid-hold. Relays restore OFF on boot.
+#
+# Upload: esphome run valve-timer.yaml
+# Device name stays "test-node", so OTA finds the board at test-node.local
+# with the existing OTA password.
+
+substitutions:
+  wifi_ssid: "PLACEHOLDER"   # override via upload.sh (parses secrets.h)
+  wifi_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+  # Full valve travel lives in the "Full Travel Time" number (HA-adjustable,
+  # default 3.55 s - verified by seat test under pressure 2026-08-17, same
+  # both directions). Everything scales from it: homing drives are travel +
+  # margin, and the flow table stores open-from-seat FRACTIONS of travel,
+  # so a 3.60 s replacement valve only needs the number changed in HA.
+  home_margin_s: "0.25"        # extra drive past full travel when homing;
+                               # end-stop switch cuts the motor either way
+
+esphome:
+  name: test-node
+  friendly_name: Valve Timer
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+
+api:    # unencrypted - bench rig only
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: DEBUG   # actuation times also land in the log as "[valve] ..." lines
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
+  - id: relay_expander
+    address: 0x1A
+
+globals:
+  - id: t_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: timing_which     # 0 = idle, 1 = closing (REL1), 2 = opening (REL2)
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+switch:
+  - platform: gpio
+    name: "Valve Close (REL1)"
+    id: rel_close
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 1
+      mode: OUTPUT
+    interlock: [rel_open]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(t_start) = millis();
+          id(timing_which) = 1;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(timing_which) == 1) {
+            float t = (millis() - id(t_start)) / 1000.0f;
+            id(timing_which) = 0;
+            id(elapsed_time).publish_state(t);
+            id(last_close_time).publish_state(t);
+            ESP_LOGI("valve", "CLOSE energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve Open (REL2)"
+    id: rel_open
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 2
+      mode: OUTPUT
+    interlock: [rel_close]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(t_start) = millis();
+          id(timing_which) = 2;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(timing_which) == 2) {
+            float t = (millis() - id(t_start)) / 1000.0f;
+            id(timing_which) = 0;
+            id(elapsed_time).publish_state(t);
+            id(last_open_time).publish_state(t);
+            ESP_LOGI("valve", "OPEN energized for %.2f s", t);
+          }
+
+  # Bench-test auto close: when ON, each Go To Flow click also arms a timer
+  # (Auto Close After); when it expires the valve drives fully closed. Every
+  # trial then has the same closed -> full open -> position -> hold -> closed
+  # profile, so the transient extra flow is identical across all settings.
+  - platform: template
+    name: "Auto Close"
+    id: auto_close
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_off:
+      - script.stop: auto_close_timer
+
+button:
+  - platform: template
+    name: "STOP (both relays off)"
+    on_press:
+      - script.stop: go_to_flow
+      - script.stop: auto_close_timer
+      - script.stop: full_close
+      - switch.turn_off: rel_open
+      - switch.turn_off: rel_close
+
+  - platform: template
+    name: "Go To Flow"
+    on_press:
+      - script.stop: auto_close_timer
+      - script.execute: go_to_flow
+
+number:
+  # THE per-valve calibration constant: full travel time, measured with the
+  # seat test (drive closed, then time open-to-endstop; symmetric). All
+  # homing drives and position pulses scale from this at runtime.
+  - platform: template
+    name: "Full Travel Time"
+    id: travel_time
+    unit_of_measurement: "s"
+    min_value: 2.0
+    max_value: 6.0
+    step: 0.01
+    initial_value: 3.55
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "Target Flow %"
+    id: target_flow
+    unit_of_measurement: "%"
+    min_value: 0
+    max_value: 100
+    step: 10
+    initial_value: 50
+    optimistic: true
+    restore_value: true
+    mode: slider
+
+  - platform: template
+    name: "Auto Close After"
+    id: auto_close_after
+    unit_of_measurement: "min"
+    min_value: 0.5
+    max_value: 30
+    step: 0.5
+    initial_value: 5
+    optimistic: true
+    restore_value: true
+    mode: box
+
+script:
+  # Position by flow. Re-home at the FULL-OPEN end (never dead-heads the
+  # pump - worst case during a move is full flow), then close-pulse down to
+  # the target. Every position is approached open->closing, so gear
+  # backlash is consistent move to move.
+  # FLOW->PULSE table maps flow % directly to close-pulse SECONDS from full
+  # open - measured with the faucet bucket rig 2026-08-17 (trickle sweep:
+  # open-from-seat 0.7/0.8/0.9/1.0 s = 5/10/15/25% flow; close pulse =
+  # 3.55 - open equivalent). Above 25% is linear interpolation to full open
+  # - plateau region, refine with bucket data if it ever matters.
+  # CAUTION: target 0% seats the valve fully - only command 0 with the
+  # pump off.
+  - id: go_to_flow
+    mode: restart
+    then:
+      - switch.turn_off: rel_close
+      - switch.turn_on: rel_open
+      - delay: !lambda 'return (uint32_t)((id(travel_time).state + ${home_margin_s}) * 1000.0f);'
+      - switch.turn_off: rel_open
+      - delay: 300ms
+      - if:
+          condition:
+            lambda: 'return id(target_flow).state < 99.5;'
+          then:
+            - switch.turn_on: rel_close
+            - delay: !lambda |-
+                // OPEN_FRAC = open-from-seat position as a FRACTION of full
+                // travel (bench valve: 0.5-1.0 s of 3.55 s). FLOW[0] anchors
+                // water-zero (0.141 = flow ceases), not the seat - the
+                // explicit 0% branch below drives to the end-stop instead.
+                // Close pulse from full open = (1 - frac) x travel time.
+                static const float FLOW[7]      = {0,     2,     5,     10,    15,    25,    100};
+                static const float OPEN_FRAC[7] = {0.141, 0.169, 0.197, 0.225, 0.254, 0.282, 1.0};
+                float T = id(travel_time).state;
+                float f = id(target_flow).state;
+                if (f < 0.0f) f = 0.0f;
+                if (f > 100.0f) f = 100.0f;
+                // 0% must SEAL: full drive to the mechanical end-stop.
+                if (f <= 0.5f) {
+                  uint32_t seat_ms = (uint32_t)((T + ${home_margin_s}) * 1000.0f);
+                  ESP_LOGI("valve", "Go to 0%% flow: full close (%u ms seat drive)", seat_ms);
+                  return seat_ms;
+                }
+                float frac = 1.0f;
+                for (int i = 0; i < 6; i++) {
+                  if (f <= FLOW[i + 1]) {
+                    frac = OPEN_FRAC[i] + (OPEN_FRAC[i + 1] - OPEN_FRAC[i]) * (f - FLOW[i]) / (FLOW[i + 1] - FLOW[i]);
+                    break;
+                  }
+                }
+                uint32_t ms = (uint32_t)((1.0f - frac) * T * 1000.0f);
+                ESP_LOGI("valve", "Go to %.0f%% flow: open-frac %.3f = %u ms close pulse from full open", f, frac, ms);
+                return ms;
+            - switch.turn_off: rel_close
+      # Arm the auto-close hold AFTER the position is reached. With the hold
+      # measured from here, total flowing time per trial is constant:
+      # open transient + one full 100->0 close sweep + hold. Water delivered
+      # then differs between trials ONLY by flow(position) x hold - exact
+      # apples-to-apples for bucket calibration.
+      - if:
+          condition:
+            switch.is_on: auto_close
+          then:
+            - script.execute: auto_close_timer
+
+  # Hold timer for Auto Close; armed by go_to_flow when positioning ends.
+  - id: auto_close_timer
+    mode: restart
+    then:
+      - delay: !lambda 'return (uint32_t)(id(auto_close_after).state * 60000.0f);'
+      - logger.log:
+          tag: valve
+          format: "Auto close: timer expired, closing valve"
+      - script.execute: full_close
+
+  # Drive fully closed from any position (end-stop takes the overrun).
+  - id: full_close
+    mode: restart
+    then:
+      - script.stop: go_to_flow
+      - switch.turn_off: rel_open
+      - switch.turn_on: rel_close
+      - delay: !lambda 'return (uint32_t)((id(travel_time).state + ${home_margin_s}) * 1000.0f);'
+      - switch.turn_off: rel_close
+
+  # Dead-man: drops both relays 20 s after the last turn-on no matter what
+  # (covers a lost HA/Wi-Fi connection mid-hold). Harmless no-op if the
+  # relay was already released.
+  - id: safety_timeout
+    mode: restart
+    then:
+      - delay: 20s
+      - switch.turn_off: rel_open
+      - switch.turn_off: rel_close
+      - logger.log:
+          level: WARN
+          tag: valve
+          format: "Safety timeout - relays forced off"
+
+sensor:
+  # Live stopwatch while a relay is energized; freezes at the final value
+  # when it releases.
+  - platform: template
+    name: "Valve Elapsed"
+    id: elapsed_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+
+  - platform: template
+    name: "Last Open Time"
+    id: last_open_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+
+  - platform: template
+    name: "Last Close Time"
+    id: last_close_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          if (id(timing_which) != 0) {
+            id(elapsed_time).publish_state((millis() - id(t_start)) / 1000.0f);
+          }

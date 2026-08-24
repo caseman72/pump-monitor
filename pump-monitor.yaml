@@ -1,0 +1,841 @@
+# Pump Monitor - ESP32-C6-DevKitC in the Canaduino ESP32 PLC-100 V1
+# Irrigation pump node: two flow-control valves, pump ICE enable relay,
+# pressure sensor. Temperature (DS18B20) still TODO.
+#
+# Two motorized ball valves (same model, 1/2" SS, ~3.55 s travel):
+#   Valve 1: REL1 (PCA9557 IO1) = close drive, REL2 (IO2) = open drive
+#   Valve 2: REL3 (PCA9557 IO3) = close drive, REL4 (IO4) = open drive
+#
+# Each valve has TWO positioning modes that stay in sync with each other:
+#
+#  1. `valve` entity (position slider 0-100% = calibrated FLOW %, not
+#     rotation). Every move re-homes at FULL OPEN then close-pulses down to
+#     the target - never dead-heads the pump mid-move (transient is extra
+#     flow, never zero). Position 0% drives the ball onto the seat: only
+#     command 0% with the pump off.
+#
+#  2. "Pulse Position" number (0-16): incremental open/close pulses with no
+#     re-home, for small trims (pressure control: + + + / - - -). Counter
+#     0 = seated, 1 = breakaway pulse (T - 3.0 s, ~water-zero), then +0.2 s
+#     of open travel per count, 16 = full open. Dead-reckoned - drift
+#     accumulates; any flow-slider move re-homes and resyncs the counter.
+#
+# Flow<->position math lives in valve_math.h (OPEN_FRAC table measured
+# 2026-08-17 - see README.md for the calibration procedure and data).
+#
+# Board port map ("ESP32 PLC 100 V1_SCH.pdf"):
+#   Relays Q1-Q6 via PCA9557 I2C expander @ 0x1A -> ULN2003 (IO1..IO6)
+#   I2C: SDA=GPIO6 SCL=GPIO7 (DS3231 RTC @ 0x68 on same bus)
+#   AI:  A1=GPIO0 A2=GPIO1 A3=GPIO2 A4=GPIO3 (0-10V, ~3:1 divider to 3.3 V)
+#
+# TODO: DS18B20 temperature like revel-monitor (one_wire on a spare GPIO)
+# TODO: measure Valve 2's Full Travel Time (seat test) after install;
+#       flow fractions assume same valve model as Valve 1
+# TODO: re-verify flow fractions >25% with clean-blank bucket runs
+# Pressure: calibrated to the transducer spec (1-5 V = 0-100 psi). The dial
+#       gauge read ~8 psi higher; the transducer is trusted - absolute psi is
+#       only a reference, the trace (sprinkler zones, line changes) is what
+#       matters.
+
+substitutions:
+  # Secrets - override via upload.sh (parses secrets.h)
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ap_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+  api_key: "PLACEHOLDER"
+
+  home_margin_s: "0.25"   # extra drive past full travel when homing either
+                          # direction; the end-stop switch cuts the motor
+
+esphome:
+  name: pump-monitor
+  friendly_name: Pump Monitor
+  includes:
+    - valve_math.h
+  on_boot:
+    priority: -100
+    then:
+      # Seed every reported position from the firmware's own restored
+      # globals. ESPHome's Valve::position is an uninitialized float, so on
+      # a first boot with no saved valve state it reports RAM garbage
+      # (clamped to 1.0 = "open") - which is what looked like "the valves
+      # opened on reboot". The ball never moves at boot; only the report
+      # was wrong. v1_frac/v2_frac restore from flash (0 when never saved).
+      - lambda: |-
+          id(valve_1).position = vm_frac_to_flow(id(v1_frac)) / 100.0f;
+          id(valve_1).publish_state();
+          id(valve_2).position = vm_frac_to_flow(id(v2_frac)) / 100.0f;
+          id(valve_2).publish_state();
+          id(v1_pulse_target) = id(v1_pulse);
+          id(v2_pulse_target) = id(v2_pulse);
+          id(v1_pulse_number).publish_state(id(v1_pulse));
+          id(v1_pulse_count).publish_state(id(v1_pulse));
+          id(v2_pulse_number).publish_state(id(v2_pulse));
+          id(v2_pulse_count).publish_state(id(v2_pulse));
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  power_save_mode: NONE
+  reboot_timeout: 15min
+  # Fallback hotspot: if Wi-Fi is unreachable, the device broadcasts its
+  # own AP so you can connect (192.168.4.1) and recover/OTA it.
+  ap:
+    ssid: "Pump-Monitor"
+    password: ${ap_password}
+
+captive_portal:
+
+api:
+  encryption:
+    key: ${api_key}
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: INFO
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
+  - id: relay_expander
+    address: 0x1A
+
+globals:
+  # Flow-mode target (%) and the resulting ball position (fraction)
+  - id: v1_target
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: v1_frac
+    type: float
+    restore_value: yes
+    initial_value: '0'
+  - id: v2_target
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: v2_frac
+    type: float
+    restore_value: yes
+    initial_value: '0'
+  # Pulse-mode counters (0..16) - actual position, restored across reboots
+  - id: v1_pulse
+    type: int
+    restore_value: yes
+    initial_value: '0'
+  - id: v1_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_pulse
+    type: int
+    restore_value: yes
+    initial_value: '0'
+  - id: v2_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # Stopwatch state per valve: 0 = idle, 1 = closing, 2 = opening
+  - id: v1_t_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: v1_timing
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_t_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: v2_timing
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+switch:
+  # Raw relay switches - diagnostics / manual override. The valve entities
+  # and pulse numbers are the normal interface.
+  - platform: gpio
+    name: "Valve 1 Close (REL1)"
+    id: v1_close
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 1
+      mode: OUTPUT
+    interlock: [v1_open]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v1_t_start) = millis();
+          id(v1_timing) = 1;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v1_timing) == 1) {
+            float t = (millis() - id(v1_t_start)) / 1000.0f;
+            id(v1_timing) = 0;
+            id(v1_elapsed).publish_state(t);
+            id(v1_last_close_time).publish_state(t);
+            ESP_LOGI("valve1", "CLOSE energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 1 Open (REL2)"
+    id: v1_open
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 2
+      mode: OUTPUT
+    interlock: [v1_close]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v1_t_start) = millis();
+          id(v1_timing) = 2;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v1_timing) == 2) {
+            float t = (millis() - id(v1_t_start)) / 1000.0f;
+            id(v1_timing) = 0;
+            id(v1_elapsed).publish_state(t);
+            id(v1_last_open_time).publish_state(t);
+            ESP_LOGI("valve1", "OPEN energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 2 Close (REL3)"
+    id: v2_close
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 3
+      mode: OUTPUT
+    interlock: [v2_open]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v2_t_start) = millis();
+          id(v2_timing) = 1;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v2_timing) == 1) {
+            float t = (millis() - id(v2_t_start)) / 1000.0f;
+            id(v2_timing) = 0;
+            id(v2_elapsed).publish_state(t);
+            id(v2_last_close_time).publish_state(t);
+            ESP_LOGI("valve2", "CLOSE energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 2 Open (REL4)"
+    id: v2_open
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 4
+      mode: OUTPUT
+    interlock: [v2_close]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v2_t_start) = millis();
+          id(v2_timing) = 2;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v2_timing) == 2) {
+            float t = (millis() - id(v2_t_start)) / 1000.0f;
+            id(v2_timing) = 0;
+            id(v2_elapsed).publish_state(t);
+            id(v2_last_open_time).publish_state(t);
+            ESP_LOGI("valve2", "OPEN energized for %.2f s", t);
+          }
+
+  # ICE (in-case-of-emergency) pump enable: REL5/REL6 drive an external
+  # 2-relay module (Songle SRD-05VDC) whose NO contact is in line with the
+  # pump control wiring. ON = relay energized = pump circuit closed; any
+  # failure (reboot, dead ESP, broken wire, outage) drops it = pump cut.
+  # Only ONE relay is in service at a time - the other is a spare selected
+  # via "Control Wiring Relay Select" (no OTA needed if one dies).
+  - platform: gpio
+    id: ice_rel5
+    name: "ICE REL5 (raw)"
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 5
+      mode: OUTPUT
+
+  - platform: gpio
+    id: ice_rel6
+    name: "ICE REL6 (raw)"
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 6
+      mode: OUTPUT
+
+  # The one switch HA sees: routes to REL5 or REL6 per the selector.
+  # Comes up OFF after any reboot (deliberate re-enable). The valve
+  # dead-man timer deliberately does NOT touch these.
+  - platform: template
+    name: "Control Wiring Relay"
+    id: ice_control
+    icon: "mdi:electric-switch"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - lambda: |-
+          if (id(ice_select).active_index().value_or(0) == 0) {
+            id(ice_rel5).turn_on();
+          } else {
+            id(ice_rel6).turn_on();
+          }
+    on_turn_off:
+      - switch.turn_off: ice_rel5
+      - switch.turn_off: ice_rel6
+
+select:
+  - platform: template
+    name: "Control Wiring Relay Select"
+    id: ice_select
+    options: ["REL5", "REL6"]
+    initial_option: "REL5"
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    icon: "mdi:swap-horizontal"
+    on_value:
+      # Selector changed while ON: make-before-break onto the new relay.
+      - lambda: |-
+          if (id(ice_control).state) {
+            if (i == 0) {
+              id(ice_rel5).turn_on();
+              id(ice_rel6).turn_off();
+            } else {
+              id(ice_rel6).turn_on();
+              id(ice_rel5).turn_off();
+            }
+          }
+
+# Native HA valve entities. Position slider = calibrated flow %.
+# open = full open, close = SEAT (pump off only!), stop = relays off.
+# restore_mode RESTORE: the ball doesn't move on reboot, so the last
+# reported position is still true.
+valve:
+  - platform: template
+    name: "Valve 1"
+    id: valve_1
+    device_class: water
+    optimistic: true
+    has_position: true
+    restore_mode: RESTORE
+    open_action:
+      - globals.set:
+          id: v1_target
+          value: '100.0'
+      - script.execute: v1_go
+    close_action:
+      - globals.set:
+          id: v1_target
+          value: '0.0'
+      - script.execute: v1_go
+    position_action:
+      - globals.set:
+          id: v1_target
+          value: !lambda 'return pos * 100.0f;'
+      - script.execute: v1_go
+    stop_action:
+      - script.stop: v1_go
+      - script.stop: v1_pulse_go
+      - switch.turn_off: v1_open
+      - switch.turn_off: v1_close
+
+  - platform: template
+    name: "Valve 2"
+    id: valve_2
+    device_class: water
+    optimistic: true
+    has_position: true
+    restore_mode: RESTORE
+    open_action:
+      - globals.set:
+          id: v2_target
+          value: '100.0'
+      - script.execute: v2_go
+    close_action:
+      - globals.set:
+          id: v2_target
+          value: '0.0'
+      - script.execute: v2_go
+    position_action:
+      - globals.set:
+          id: v2_target
+          value: !lambda 'return pos * 100.0f;'
+      - script.execute: v2_go
+    stop_action:
+      - script.stop: v2_go
+      - script.stop: v2_pulse_go
+      - switch.turn_off: v2_open
+      - switch.turn_off: v2_close
+
+button:
+  - platform: template
+    name: "STOP All"
+    icon: "mdi:alert-octagon"
+    on_press:
+      - script.stop: v1_go
+      - script.stop: v2_go
+      - script.stop: v1_pulse_go
+      - script.stop: v2_pulse_go
+      - switch.turn_off: v1_open
+      - switch.turn_off: v1_close
+      - switch.turn_off: v2_open
+      - switch.turn_off: v2_close
+
+  # Pulse +/- : step the pulse counter by one. Each press advances the
+  # LAST REQUESTED target (not the current position), so rapid presses
+  # accumulate correctly while a move is still in flight (queued script).
+  - platform: template
+    name: "Valve 1 Pulse +"
+    icon: "mdi:plus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v1_pulse_target) + 1;
+          if (t > VM_PULSE_MAX) t = VM_PULSE_MAX;
+          id(v1_pulse_target) = t;
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 1 Pulse -"
+    icon: "mdi:minus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v1_pulse_target) - 1;
+          if (t < 0) t = 0;
+          id(v1_pulse_target) = t;
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse +"
+    icon: "mdi:plus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v2_pulse_target) + 1;
+          if (t > VM_PULSE_MAX) t = VM_PULSE_MAX;
+          id(v2_pulse_target) = t;
+      - script.execute: v2_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse -"
+    icon: "mdi:minus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v2_pulse_target) - 1;
+          if (t < 0) t = 0;
+          id(v2_pulse_target) = t;
+      - script.execute: v2_pulse_go
+
+  - platform: restart
+    name: "Restart"
+    icon: "mdi:restart"
+
+number:
+  # THE per-valve calibration constant: full travel time, measured with the
+  # seat test (drive closed onto the seat, then time open-to-endstop;
+  # travel is symmetric). All homing drives and position pulses scale from
+  # this at runtime - a replacement valve of the same model only needs
+  # this number changed.
+  - platform: template
+    name: "Valve 1 Full Travel Time"
+    id: v1_travel_time
+    unit_of_measurement: "s"
+    min_value: 2.0
+    max_value: 6.0
+    step: 0.01
+    initial_value: 3.55
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "Valve 2 Full Travel Time"
+    id: v2_travel_time
+    unit_of_measurement: "s"
+    min_value: 2.0
+    max_value: 6.0
+    step: 0.01
+    initial_value: 3.55
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    mode: box
+
+  # Pulse target (0..16): direct "jump to N" - pulses the valve from its
+  # current counter to N in ONE continuous drive. The everyday controls are
+  # the Pulse +/- buttons; this lives in the config category. (HA number
+  # entities are floats, hence the separate integer Pulse Position sensor.)
+  - platform: template
+    name: "Valve 1 Pulse Target"
+    id: v1_pulse_number
+    icon: "mdi:target"
+    entity_category: config
+    min_value: 0
+    max_value: 16
+    step: 1
+    mode: box
+    update_interval: never
+    set_action:
+      - globals.set:
+          id: v1_pulse_target
+          value: !lambda 'return (int) x;'
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse Target"
+    id: v2_pulse_number
+    icon: "mdi:target"
+    entity_category: config
+    min_value: 0
+    max_value: 16
+    step: 1
+    mode: box
+    update_interval: never
+    set_action:
+      - globals.set:
+          id: v2_pulse_target
+          value: !lambda 'return (int) x;'
+      - script.execute: v2_pulse_go
+
+script:
+  # ---- Flow-mode positioning (valve entity) ----
+  # Re-home at FULL OPEN (never dead-heads the pump), then close-pulse
+  # (1 - frac) x T down to the target. Every position is approached
+  # open->closing, so gear backlash is consistent. Resyncs the pulse
+  # counter when done.
+  - id: v1_go
+    mode: restart
+    then:
+      - script.stop: v1_pulse_go
+      - lambda: |-
+          float f = id(v1_target);
+          id(v1_frac) = (f <= 0.5f) ? 0.0f : ((f >= 99.5f) ? 1.0f : vm_flow_to_frac(f));
+      - switch.turn_off: v1_close
+      - switch.turn_on: v1_open
+      - delay: !lambda 'return (uint32_t)((id(v1_travel_time).state + ${home_margin_s}) * 1000.0f);'
+      - switch.turn_off: v1_open
+      - delay: 300ms
+      - if:
+          condition:
+            lambda: 'return id(v1_target) < 99.5f;'
+          then:
+            - switch.turn_on: v1_close
+            - delay: !lambda |-
+                float T = id(v1_travel_time).state;
+                if (id(v1_target) <= 0.5f) {
+                  // 0% must SEAL: full drive to the mechanical end-stop.
+                  uint32_t seat_ms = (uint32_t)((T + ${home_margin_s}) * 1000.0f);
+                  ESP_LOGI("valve1", "Position 0%%: full close (%u ms seat drive)", (unsigned) seat_ms);
+                  return seat_ms;
+                }
+                uint32_t ms = (uint32_t)((1.0f - id(v1_frac)) * T * 1000.0f);
+                ESP_LOGI("valve1", "Position %.0f%%: open-frac %.3f = %u ms close pulse from full open", id(v1_target), id(v1_frac), (unsigned) ms);
+                return ms;
+            - switch.turn_off: v1_close
+      - lambda: |-
+          id(v1_pulse) = vm_frac_to_pulse(id(v1_frac), id(v1_travel_time).state);
+          id(v1_pulse_target) = id(v1_pulse);
+          id(v1_pulse_number).publish_state(id(v1_pulse));
+          id(v1_pulse_count).publish_state(id(v1_pulse));
+
+  - id: v2_go
+    mode: restart
+    then:
+      - script.stop: v2_pulse_go
+      - lambda: |-
+          float f = id(v2_target);
+          id(v2_frac) = (f <= 0.5f) ? 0.0f : ((f >= 99.5f) ? 1.0f : vm_flow_to_frac(f));
+      - switch.turn_off: v2_close
+      - switch.turn_on: v2_open
+      - delay: !lambda 'return (uint32_t)((id(v2_travel_time).state + ${home_margin_s}) * 1000.0f);'
+      - switch.turn_off: v2_open
+      - delay: 300ms
+      - if:
+          condition:
+            lambda: 'return id(v2_target) < 99.5f;'
+          then:
+            - switch.turn_on: v2_close
+            - delay: !lambda |-
+                float T = id(v2_travel_time).state;
+                if (id(v2_target) <= 0.5f) {
+                  uint32_t seat_ms = (uint32_t)((T + ${home_margin_s}) * 1000.0f);
+                  ESP_LOGI("valve2", "Position 0%%: full close (%u ms seat drive)", (unsigned) seat_ms);
+                  return seat_ms;
+                }
+                uint32_t ms = (uint32_t)((1.0f - id(v2_frac)) * T * 1000.0f);
+                ESP_LOGI("valve2", "Position %.0f%%: open-frac %.3f = %u ms close pulse from full open", id(v2_target), id(v2_frac), (unsigned) ms);
+                return ms;
+            - switch.turn_off: v2_close
+      - lambda: |-
+          id(v2_pulse) = vm_frac_to_pulse(id(v2_frac), id(v2_travel_time).state);
+          id(v2_pulse_target) = id(v2_pulse);
+          id(v2_pulse_number).publish_state(id(v2_pulse));
+          id(v2_pulse_count).publish_state(id(v2_pulse));
+
+  # ---- Pulse-mode positioning (number entity) ----
+  # Moves from the current counter to the target in one continuous pulse
+  # (no re-home). Queued: rapid +/+/+ presses each run in order, and each
+  # run reads the latest target, so the valve ends where the last press
+  # asked. Going to 0 or 16 adds the homing margin to guarantee the stop.
+  # Resyncs the valve entity's reported flow % when done.
+  - id: v1_pulse_go
+    mode: queued
+    then:
+      - if:
+          condition:
+            lambda: 'return id(v1_pulse_target) > id(v1_pulse);'
+          then:
+            - switch.turn_off: v1_close
+            - switch.turn_on: v1_open
+            - delay: !lambda |-
+                float T = id(v1_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v1_pulse_target), T) - vm_pulse_to_open_s(id(v1_pulse), T);
+                if (id(v1_pulse_target) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms open", id(v1_pulse), id(v1_pulse_target), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v1_open
+      - if:
+          condition:
+            lambda: 'return id(v1_pulse_target) < id(v1_pulse);'
+          then:
+            - switch.turn_off: v1_open
+            - switch.turn_on: v1_close
+            - delay: !lambda |-
+                float T = id(v1_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v1_pulse), T) - vm_pulse_to_open_s(id(v1_pulse_target), T);
+                if (id(v1_pulse_target) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms close", id(v1_pulse), id(v1_pulse_target), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v1_close
+      - lambda: |-
+          id(v1_pulse) = id(v1_pulse_target);
+          id(v1_pulse_number).publish_state(id(v1_pulse));
+          id(v1_pulse_count).publish_state(id(v1_pulse));
+          id(v1_frac) = vm_pulse_to_frac(id(v1_pulse), id(v1_travel_time).state);
+          id(valve_1).position = vm_frac_to_flow(id(v1_frac)) / 100.0f;
+          id(valve_1).publish_state();
+
+  - id: v2_pulse_go
+    mode: queued
+    then:
+      - if:
+          condition:
+            lambda: 'return id(v2_pulse_target) > id(v2_pulse);'
+          then:
+            - switch.turn_off: v2_close
+            - switch.turn_on: v2_open
+            - delay: !lambda |-
+                float T = id(v2_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v2_pulse_target), T) - vm_pulse_to_open_s(id(v2_pulse), T);
+                if (id(v2_pulse_target) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms open", id(v2_pulse), id(v2_pulse_target), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v2_open
+      - if:
+          condition:
+            lambda: 'return id(v2_pulse_target) < id(v2_pulse);'
+          then:
+            - switch.turn_off: v2_open
+            - switch.turn_on: v2_close
+            - delay: !lambda |-
+                float T = id(v2_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v2_pulse), T) - vm_pulse_to_open_s(id(v2_pulse_target), T);
+                if (id(v2_pulse_target) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms close", id(v2_pulse), id(v2_pulse_target), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v2_close
+      - lambda: |-
+          id(v2_pulse) = id(v2_pulse_target);
+          id(v2_pulse_number).publish_state(id(v2_pulse));
+          id(v2_pulse_count).publish_state(id(v2_pulse));
+          id(v2_frac) = vm_pulse_to_frac(id(v2_pulse), id(v2_travel_time).state);
+          id(valve_2).position = vm_frac_to_flow(id(v2_frac)) / 100.0f;
+          id(valve_2).publish_state();
+
+  # Dead-man: drops the valve relays 20 s after the last turn-on no matter
+  # what (covers a lost HA/Wi-Fi connection mid-move). Harmless no-op if
+  # the relays were already released. Does NOT touch the ICE relays.
+  - id: safety_timeout
+    mode: restart
+    then:
+      - delay: 20s
+      - switch.turn_off: v1_open
+      - switch.turn_off: v1_close
+      - switch.turn_off: v2_open
+      - switch.turn_off: v2_close
+      - logger.log:
+          level: WARN
+          tag: valve
+          format: "Safety timeout - valve relays forced off"
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    id: wifi_rssi
+    update_interval: 60s
+    icon: "mdi:wifi"
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+    icon: "mdi:timer-outline"
+    entity_category: diagnostic
+
+  # ---- Pressure ----
+  # 1-5 V ratiometric transducer, 0-100 psi, on AI1 (GPIO0). The ESP32
+  # PLC-100 V1 divides 0-10 V down to ~3.3 V for the ADC (~3:1 - NOT the
+  # 2:1 of the 5 V Nano board). Multiplier fitted 2026-08-18: sensor
+  # 3.079 V (meter) while the ADC read 0.995 V -> 3.094. Refine with a
+  # second point at 0 psi (depressurize, compare meter vs this sensor).
+  # Calibration is then on SENSOR-side volts against the measured 5.045 V
+  # supply: 1.009 V = 0 psi, 5.045 V = 100 psi (ratiometric). Add a third
+  # calibrate_linear point to match a reference gauge if preferred.
+  - platform: adc
+    pin: GPIO0
+    id: pressure_volts
+    name: "Pressure Sensor Voltage"
+    attenuation: 12db
+    update_interval: 500ms
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:sine-wave"
+    entity_category: diagnostic
+    filters:
+      - multiply: 3.094
+      - sliding_window_moving_average:
+          window_size: 8
+          send_every: 4
+
+  - platform: copy
+    source_id: pressure_volts
+    name: "Pump Pressure"
+    id: pump_pressure
+    unit_of_measurement: "psi"
+    device_class: pressure
+    accuracy_decimals: 1
+    icon: "mdi:gauge"
+    filters:
+      - calibrate_linear:
+          - 1.009 -> 0.0
+          - 5.045 -> 100.0
+      - clamp:
+          min_value: 0
+          max_value: 110
+
+  # The pulse counter as HA sees it - a true integer sensor ("3", never
+  # "3.0"). Controlled by the Pulse +/- buttons (or the Pulse Target number
+  # for a direct jump).
+  - platform: template
+    name: "Valve 1 Pulse Position"
+    id: v1_pulse_count
+    icon: "mdi:counter"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "Valve 2 Pulse Position"
+    id: v2_pulse_count
+    icon: "mdi:counter"
+    accuracy_decimals: 0
+    update_interval: never
+
+  # ---- Per-valve motion diagnostics ----
+  # Live stopwatch while a relay is energized (freezes at the final
+  # value), plus the last pulse durations - verify positioning from HA
+  # without log access.
+  - platform: template
+    name: "Valve 1 Elapsed"
+    id: v1_elapsed
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 1 Last Open Time"
+    id: v1_last_open_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 1 Last Close Time"
+    id: v1_last_close_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+
+  - platform: template
+    name: "Valve 2 Elapsed"
+    id: v2_elapsed
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 2 Last Open Time"
+    id: v2_last_open_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 2 Last Close Time"
+    id: v2_last_close_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      icon: "mdi:ip-network"
+      entity_category: diagnostic
+    ssid:
+      name: "WiFi Network"
+      icon: "mdi:wifi-cog"
+      entity_category: diagnostic
+
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          if (id(v1_timing) != 0) {
+            id(v1_elapsed).publish_state((millis() - id(v1_t_start)) / 1000.0f);
+          }
+          if (id(v2_timing) != 0) {
+            id(v2_elapsed).publish_state((millis() - id(v2_t_start)) / 1000.0f);
+          }

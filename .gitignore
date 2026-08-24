@@ -1,0 +1,21 @@
+# Secrets (contains credentials)
+secrets.h
+
+# ESPHome build artifacts
+.esphome/
+
+# RCS version control files
+**/.rcs/
+
+# Claude Code
+**/.claude/
+
+# Data files (logs, photos)
+*.log
+*.zip
+*.jpg
+
+# macOS
+.DS_Store
+
+*.bak.*
