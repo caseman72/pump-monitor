@@ -134,15 +134,19 @@ the controller:
   can't give is TOTAL pump flow incl. gasket leakage; that needs a flow
   meter at the pump or a pond-drawdown timing with the inlet valved off —
   only worth it if the gauge-based efficiency still looks off.
-  - **End-of-line gauge** (Casey can do this): put a gauge at the far end of
-    a running line → reads FIELD pressure. Then:
-      · mainline+coupling loss = pump transducer − field gauge (measured,
-        not estimated);
-      · true nozzle pressure → corrects per-head flow (5 GPM is specced AT
-        the nozzle, so if the field end reads e.g. 42 psi, each head flows
-        ~5×√(42/50) ≈ 4.6 GPM, not 5.0);
-      · a second cross-check on the pump transducer if the two gauges can be
-        compared at a common known pressure.
+  - **Lateral gauge(s)** (Casey can do this): nozzle pressure is NOT one
+    value — it drops along the lateral as each riser draws water, so the
+    first head (nearest the mainline) is highest and the last head is
+    lowest. Best measurement is to bracket the lateral:
+      · gauge at the FIRST head and the LAST head of a running line;
+      · pump transducer − first-head = mainline loss (~1000 ft 4"→3");
+        first-head − last-head = lateral loss;
+      · representative nozzle pressure ≈ average of the two (flow ∝ √P, near
+        linear over a well-designed lateral's ~±10% band) → GPM/head off the
+        Rainbird chart × head count = total nozzle flow. (5 GPM is specced AT
+        the nozzle; e.g. avg 45 psi → ~5×√(45/50) ≈ 4.7 GPM/head.)
+      · one gauge at the end only = the MINIMUM nozzle pressure (lower bound
+        on flow) but still gives total pump→field loss.
   - **Pump-off transducer check** (do first, it's free): with the corrected
     1-ft suction geometry the pump-off gauge should read ~0.4 psi (≈0). If
     it reads +8/−8 at zero flow, the transducer has an offset and every
