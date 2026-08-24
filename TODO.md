@@ -61,7 +61,7 @@ Casey will do a quick run on each line (2026-08-24) to fill the table.
 |---|---:|---:|---|---|
 | line 1 | 17 | 51.5–51.7 | 2026-08-23/24 | steady; ≈125 GPM on the curve (right of BEP). 51.7 re-confirmed 2026-08-24 05:30–05:50 and 06:20–07:27 |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
-| line 3 | 19 | **49.9** | 2026-08-24 08:18– (recorder) | predicted ~49–50 ✓. −1.8 vs line 1. (The dial's ~62 on 2026-08-19 was wrong — its offset is not a constant; ignore the dial.) |
+| line 3 | 19 | _pending_ | | predict ~49–50. (A 49.9 reading on 2026-08-24 08:18 was mislogged as line 3 — it was lawn zone 3 on line 1, which happens to read the same. Retracted. The dial's ~62 on 2026-08-19 was also wrong; ignore the dial.) |
 | line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with lawn zone 1 on top (~+18 GPM), ~160 GPM ≈ just over 5 HP nameplate, inside the 1.15 service factor — see maintenance history below for why there's margin here |
 
 ### Pump maintenance history (for context on motor margin)
@@ -244,10 +244,14 @@ switching transient, ~10 s, not sustained). Baseline was back at 51.7 from
 06:20 until the lawn cycle at 07:27. (An earlier screenshot-based reading
 had pump zone 2 running 79 min — a misread; the recorder shows ~15 min.)
 
-**Lawn zone cross-check, same morning (recorder)**: lawn zone 1 07:28–07:52
-= **47.6 psi** (47.4 the evening before), lawn zone 2 07:52–08:14+ =
-**48.6 psi** (48.5 the evening before). Repeatable to ~0.1–0.2 psi across
-12+ hours — solid grounds to trust the deltas for the feedforward table.
+**Lawn zone cross-check, same morning (recorder)** — the full cycle on top
+of line 1 (51.7): zone 1 07:28–07:52 = **47.6** (47.4 the evening before),
+zone 2 07:52–08:18 = **48.6** (48.5), zone 3 08:18–08:38 = **49.9** (49.8),
+zone 4 08:38–08:52 = **51.0** (51.1), then line 1 alone again at 51.6.
+All four repeat to within 0.2 psi across 12+ hours — solid grounds to trust
+the deltas for the feedforward table. (Lesson: a lawn-zone level can
+coincide with a predicted line level — always check the time against the
+lawn schedule before labeling a plateau as a line change.)
 
 Numbers now come straight from HA's recorder via `tools/ha_pressure.py`
 (read-only query over ssh to machone, sustained-plateau detection); no more
