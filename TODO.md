@@ -300,7 +300,10 @@ Findings:
   Worth tracking in 2025+: a continuing climb is the signal to act on
   before something fails outright.
   - **Update 2026-08-24: the run capacitor was already replaced**, week of
-    2025-07-06 (Casey). All 418 days of archived pump-only power data
+    2025-07-06 (Casey). **Caveat (Casey, 2026-08-24): the installed
+    cap may be the "ok" in-spec loaner from the electrical shop, not a
+    fresh new one — a new cap was ordered and may still be boxed/uninstalled
+    (Casey unsure). So there may be a pending swap to the proper new cap.** All 418 days of archived pump-only power data
     (2022-2024) predate this, so the entire drift trend documented above
     reflects the OLD capacitor's degradation — a capacitor typically only
     gets swapped when it tests bad or the pump shows symptoms (hard
@@ -373,6 +376,12 @@ screenshot reading needed for future line runs.
       ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
       (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
+- [ ] **Confirm which capacitor is installed.** The July 2025 replacement
+      may be the electrical shop's "ok" in-spec loaner, not the new one
+      Casey ordered — the new cap may still be in a box, uninstalled. Check,
+      and swap in the proper new cap if it hasn't been done. (A weak/loaner
+      cap would keep motor input slightly high — same signature as the
+      pre-2025 drift, just smaller.)
 - [ ] **RE-CHECK the ICE High Trip (65 psi) before wiring the relay in.**
       With the corrected suction geometry (+0.4 psi, not +5), published
       dead-head at the gauge ≈ **65 psi** — so 65 psi High Trip sits right
