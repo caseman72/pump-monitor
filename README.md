@@ -22,6 +22,7 @@ an incremental **Pulse Position** for fine trims.
 | I2C | SDA=GPIO6, SCL=GPIO7 (DS3231 RTC @ 0x68 shares the bus) |
 | Valves | 1/2" SS motorized ball valve, ~3.55 s travel, internal end-stop switches |
 | Power | 12–24 V on the board supply terminals (relay coils from onboard 5 V buck) |
+| Pump | Goulds 3656 S-Group 1½ × 2 – 6, 5-15/16" impeller, WEG 5 HP 1-ph 3490 RPM. From the Goulds 3500 RPM curve: **shutoff ~150 ft ≈ 65 psi**, best efficiency (~73%) ≈ 120 ft ≈ **52 psi @ ~100 GPM**, 5 HP limit ≈ 95 ft ≈ 41 psi @ ~150 GPM. Pond suction; 4" irrigation main, 1¼–1½" lawn lines |
 
 The actuators have internal end-stop limit switches, so driving past full
 travel is harmless — the firmware exploits this to re-home on every move.
@@ -153,7 +154,8 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: the relay is a debounced comparator with
     hysteresis, like the Furnas itself — **closed while Low Trip < pressure
-    < High Trip**, open otherwise. 3 s at/above High Trip (default 80 psi)
+    < High Trip**, open otherwise. 3 s at/above High Trip (default 60 psi — above the ~52 psi normal
+    maximum, below the pump's ~65 psi shutoff head)
     opens it — the ICE is the pump's **only high-pressure protection**: the
     Furnas only does low, and a dead-headed centrifugal pump draws *less*
     current, so the thermal overloads never see it. High Trip must sit
