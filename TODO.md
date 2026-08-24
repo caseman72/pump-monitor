@@ -28,19 +28,31 @@ revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 ## 1. Staged pressure response (the real control system) — NOT YET
 
 > **DECISION 2026-08-24 — the ICE pump-kill relay is NOT being wired into
-> the pump loop this year, and maybe ever.** Rationale (Casey): the recycle
-> valves fail OPEN (toward the pond), so any valve failure pushes toward
-> more flow, never dead-head — the recycle system is inherently fail-safe
-> against overpressure, which is exactly what the ICE high-trip was for.
-> Meanwhile *stopping* the pump is itself the risky/expensive act (~$500 to
-> recover, per last year; the pump has been off only 2x all season) and
-> stresses the latching starter. So a pump-kill on overpressure trades a
-> safe failure mode for a dangerous one, while the Furnas + thermal
-> overloads already cover the low-side/overload cases. **The ICE stays
-> firmware-only: a monitoring/alert layer, relay never actuating the pump
-> loop.** Consequence: the ICE High Trip is just an ALERT threshold now,
+> the pump loop this year, and maybe ever.** Solid reasons (Casey):
+> *stopping* the pump is itself the risky/expensive act (~$500 to recover,
+> per last year; the pump has been off only 2x all season) and stresses the
+> latching starter; the Furnas + thermal overloads already cover the
+> low-side/overload cases; and a pump-kill on overpressure would trade a
+> known-cost failure for the recycle path instead.
+>
+> ⚠️ **Rationale correction needed (2026-08-24):** an earlier version of
+> this note claimed "the recycle valves fail OPEN, so the recycle system is
+> inherently fail-safe against overpressure." **That is WRONG** — the
+> motorized ball valves are hold-last-position (motor-driven, no spring
+> return): on power/Wi-Fi/controller loss they STAY WHERE THEY ARE. A
+> closed recycle valve stays closed. So the recycle valves are NOT the
+> fail-safe. The real guaranteed flow path is most likely the
+> **always-running irrigation lines** (manual aluminum pipe, independent of
+> the controller) — TBC with Casey. Open gap: all lines closed + a recycle
+> valve closed + controller down = dead-head. Need to confirm a line is
+> always open during operation before treating overpressure as fully
+> covered without the kill.
+>
+> **The ICE stays firmware-only: a monitoring/alert layer, relay never
+> actuating the pump loop.** The ICE High Trip is an ALERT threshold now,
 > not a kill point — its exact value (and the dead-head-margin/worn-pump
-> question) is no longer safety-critical.
+> question) is no longer safety-critical, but the dead-head SCENARIO above
+> still needs an answer.
 
 Today the ICE layer is a plain threshold: ≥ High Trip (95 psi) for 3 s →
 open the pump loop. The intended system is staged: the recycle valves
