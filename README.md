@@ -152,11 +152,18 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
   - **ON = bypass**: loop held closed unconditionally (work on the board,
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: loop still closed; opened only when pressure
-    is ≥ **ICE High Trip** (default 95 psi, sustained 3 s) or ≤ **ICE Low
-    Trip** (default 20 psi; 0 disables; arms only after 30 s above low+10,
-    then sustained 10 s). A trip latches (**ICE Tripped**, reason in **ICE
-    Status**) until **ICE Reset**. A sensor fault (transducer voltage out of
-    the 0.7–5.3 V range) never trips.
+    is ≥ **ICE High Trip** (default 95 psi, sustained 3 s) or on the **ICE
+    Low Trip** (default 20 psi; 0 disables). The low trip works like the
+    Furnas lever: from pump start, pressure must reach low+10 within 60 s
+    ("failed to build pressure"), and once it has, 10 s at/below low trips.
+    It is the primary broken-line protection — it fires long before the
+    Furnas 10 psi cut-out or the starter's thermal overloads.
+  - **After a trip**: the loop opens; once the pump is confirmed stopped
+    (< 10 psi for 30 s) the loop **re-closes automatically** so a manual
+    restart at the pump house works without HA. The alert (**ICE Tripped**,
+    reason in **ICE Status**) stays latched until **ICE Reset**; if the
+    cause persists, the restart just trips again. A sensor fault
+    (transducer voltage outside 0.7–5.3 V) never trips.
   - **ICE Test Mode**: the trip logic runs and reports "TEST: would trip …"
     in ICE Status but never actuates the relay — lower the High Trip and
     close the main valve slowly to prove it with zero risk.

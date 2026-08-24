@@ -44,7 +44,7 @@ Naming: **house zones 1–4** (residential lawn, evenings) and **pump zones
 |---|---|---:|---|
 | 2026-08-23 | irrigation line 1 (smallest long line) | 51.5 | steady |
 | 2026-08-23 | line 1 + house zone 1 (front lawn) | 47.4 | −4 psi from one residential zone; steady ±0.1 |
-| 2026-08-23 | line 1 + house zone 2 | _pending_ | house system has 4 zones, cycles 1→4 |
+| 2026-08-23 | line 1 + house zone 2 | 48.5 | house system has 4 zones, cycles 1→4 |
 | 2026-08-23 | line 1 + house zone 3 | _pending_ | |
 | 2026-08-23 | line 1 + house zone 4 | _pending_ | |
 | 2026-08-24 | line 1 + pump zone 1 | _pending_ | morning run ~5–6 am — read from HA history |
@@ -59,8 +59,13 @@ Naming: **house zones 1–4** (residential lawn, evenings) and **pump zones
       that's the hardware floor under the ICE Low Trip (20) and the
       `Pump Running` threshold (> 10). Cut-in / high-side setting still to
       confirm so the ICE High Trip is known to sit above it.
-- [ ] Low Trip policy: keep 20 psi (a deliberate pump stop then needs ICE
-      Reset before restart) or 0 until the routine settles.
+- [x] Low Trip is the primary broken-line protection (fires ~10 s after
+      pressure falls below 20; the Furnas at 10 psi and the starter's
+      thermal overloads are the backups). Start window: pressure must reach
+      low+10 within 60 s of pump start or it trips. After any trip the loop
+      re-closes automatically once the pump is confirmed stopped, so a
+      manual restart at the pump house works; the alert stays latched until
+      ICE Reset.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,
       relay released) with the module not yet in the pump loop.
 
