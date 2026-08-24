@@ -32,6 +32,20 @@ visible as light stripes running east–west across the field, with the
 field nearest the pump. West of the field is the bare ground and trench of
 "the back", the area the future automated lines (+2 per line) would cover.
 
+## Satellite imagery (local, `images/`, gitignored)
+
+Casey pulled these from Google Maps 2026-08-24; per-field zone counts here
+are Casey's intended automation breakup (the current C/D/E watering is by
+the 4 cross-field lines, not these per-field zones).
+
+| File | Field | Zones | Notes from the image |
+|---|---|---|---|
+| `field-A-satellite.png` | A | 4 | 4 lines visible as faint E-W stripes; pond + pump house at the south edge; bare "back" area and a trench to the west |
+| `field-B-satellite.png` | B | 3 | long narrow field (190 x 310); faint line traces; a structure at the SW corner |
+| `field-C-satellite.png` | C | 4 | **4 irrigation lines clearly visible** as bright N-S lines across the field; a lone tree mid-field; structure at SW |
+| `field-D-satellite.png` | D | 4 | 4+ bright N-S lines; several trees dotting the field; road along the west edge |
+| `field-E-satellite.png` | E | 2 | tapered field on **Powell Butte Rd** (SE corner); the tapering that gives lines 1-4 fewer heads here (2/3/4/5) is visible; to become 2 zones (outside 7, inside 7) |
+
 ## Field B — 3 zones (190 × 310 ft)
 
 Zones of **7, 7+1 = 8, 7** heads; **zones 2 + 3 currently run together
