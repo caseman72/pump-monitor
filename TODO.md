@@ -62,7 +62,7 @@ Casey will do a quick run on each line (2026-08-24) to fill the table.
 | line 1 | 17 | 51.5 | 2026-08-23 | steady; ≈125 GPM on the curve (right of BEP) |
 | line 2 | 17 | _pending_ | | predict ≈ line 1 (~51–52) |
 | line 3 | 19 | _pending_ | | predict ~49–50. (Dial read ~62 on 2026-08-19 with line 3 on — inconsistent with the pipe count; the dial's offset is evidently not a constant 8 psi. Ignore the dial.) |
-| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with an evening lawn zone on top, ~43–45 → ~150 GPM ≈ 5 HP motor near full load per the curve (Casey: there are NO overload trips in practice — so either the curve placement is a little optimistic on flow, or the 1.15 service factor covers it; a clamp-meter reading on line 4 + lawn zone 1 would show which) |
+| line 4 | 21 | _pending_ | 2026-08-24 ~9 am | predict ~47–48; with an evening lawn zone on top, ~43–45 → ~150 GPM ≈ 5 HP motor near full load per the curve (Casey: overloads trip when warranted; the original heaters dropped occasionally at the high-flow end, so they were upsized with the pump installer's OK — consistent with the curve. With bigger heaters there's less thermal margin, so the controller's pressure FLOOR (~46–48 psi at the gauge) is a real motor-protection constraint, not just an efficiency preference. A clamp-meter reading on line 4 + lawn zone 1 would quantify it) |
 
 ### Lawn zone deltas (measured on line 1)
 
