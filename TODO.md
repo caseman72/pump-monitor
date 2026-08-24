@@ -128,8 +128,12 @@ the controller:
     packing's condition is an unknown in that historical input.
   Net: these push efficiency in both directions; plausibly ~50-65% =
   a healthy pump. **No wear conclusion — the estimate has too many
-  unmeasured variables.** To actually measure it: simultaneous
-  catch-can GPM (accounting for leakage) + verified psi + kW on one line.
+  unmeasured variables.** To measure it: the end-of-line gauge (below) gives
+  true nozzle pressure → nozzle flow straight off the Rainbird chart (no
+  catch-can needed — the nozzle IS the flow meter). The only thing the chart
+  can't give is TOTAL pump flow incl. gasket leakage; that needs a flow
+  meter at the pump or a pond-drawdown timing with the inlet valved off —
+  only worth it if the gauge-based efficiency still looks off.
   - **End-of-line gauge** (Casey can do this): put a gauge at the far end of
     a running line → reads FIELD pressure. Then:
       · mainline+coupling loss = pump transducer − field gauge (measured,
