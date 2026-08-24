@@ -55,8 +55,10 @@ Naming: **house zones 1–4** (residential lawn, evenings) and **pump zones
 - [ ] Wire the ICE relay into the pump loop. **NC energize-to-trip
       recommended** (`ice_run_energized: "false"`): reboots, crashes, dead
       controller all leave the latching starter loop closed.
-- [ ] Furnas pressure-switch cut-in / cut-out — confirm the ICE High Trip
-      sits above the switch's normal range.
+- [x] Furnas pressure switch **cuts out at 10 psi** (confirmed 2026-08-23);
+      that's the hardware floor under the ICE Low Trip (20) and the
+      `Pump Running` threshold (> 10). Cut-in / high-side setting still to
+      confirm so the ICE High Trip is known to sit above it.
 - [ ] Low Trip policy: keep 20 psi (a deliberate pump stop then needs ICE
       Reset before restart) or 0 until the routine settles.
 - [x] Real trip verified 2026-08-23 (High Trip 45 → tripped at 51 psi,

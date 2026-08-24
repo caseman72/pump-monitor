@@ -17,6 +17,7 @@ an incremental **Pulse Position** for fine trims.
 | Valve 2 | REL3 (close) / REL4 (open) — PCA9557 IO3/IO4 |
 | Pump ICE enable | REL5 or REL6 (selectable) → external Songle 2-relay module, NO contact in line with pump control wiring |
 | Pressure | 1–5 V ratiometric transducer, 0–100 psi, on AI1 (GPIO0, ~3:1 divider). Calibrated to the transducer spec (dial gauge read ~8 psi higher; transducer trusted — absolute psi is a reference, the trace shape is what matters) |
+| Pump switch | Furnas pressure switch on the pump, cuts out at 10 psi — the hardware floor beneath the ICE Low Trip (20 psi) and the `Pump Running` threshold |
 | Relays | PCA9557 I2C expander @ 0x1A → ULN2003 (IO1..IO6; IO0 unused) |
 | I2C | SDA=GPIO6, SCL=GPIO7 (DS3231 RTC @ 0x68 shares the bus) |
 | Valves | 1/2" SS motorized ball valve, ~3.55 s travel, internal end-stop switches |
