@@ -25,6 +25,13 @@ an incremental **Pulse Position** for fine trims.
 The actuators have internal end-stop limit switches, so driving past full
 travel is harmless — the firmware exploits this to re-home on every move.
 
+![Enclosure build](docs/enclosure.jpeg)
+
+*The build: ESP32 PLC-100 V1.2 on DIN rail in a weatherproof enclosure, 12 V
+barrel-jack supply, CAT5 pairs from REL1–REL4 to the valves, REL5/REL6 to the
+Songle 2-relay ICE module mounted in the lid, pressure transducer on AI1,
+cable glands for the field runs.*
+
 ## How positioning works
 
 The valves have no position feedback; position is dead-reckoned by motor
