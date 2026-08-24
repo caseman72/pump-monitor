@@ -159,6 +159,17 @@ Findings:
     out of the 208-230V-rated tolerance band.
   Worth tracking in 2025+: a continuing climb is the signal to act on
   before something fails outright.
+  - **Update 2026-08-24: the run capacitor was already replaced**, week of
+    2025-07-06 (Casey). All 418 days of archived pump-only power data
+    (2022-2024) predate this, so the entire drift trend documented above
+    reflects the OLD capacitor's degradation — a capacitor typically only
+    gets swapped when it tests bad or the pump shows symptoms (hard
+    starting, humming, high draw), which corroborates the hypothesis
+    rather than just being consistent with it. No pump-only CT data exists
+    from after the swap (Sense moved to whole-house Jan 2025) to directly
+    confirm power dropped back down; if a CT ever goes back on the pump
+    circuit (or Sense Flex in Dedicated Circuit mode - see the monitoring
+    item above), compare against the pre-2025-07-06 baseline above.
   - **Correction (2026-08-24): Sep 11 is NOT anomalous — retracting the
     earlier "anomaly" framing.** Casey asked directly how it differs from
     other days; running the same "second sustained plateau" detector
