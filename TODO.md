@@ -146,11 +146,23 @@ Findings:
   - May–Aug, 2023 vs 2024 only: 4592 → 4673 W (+81 W / +1.8%)
   - Within a season the pattern runs the OPPOSITE of the pond-level theory
     that motivated checking this: power is higher in spring, lower by
-    fall, in both 2023 and 2024 — so the original seasonal explanation was
-    also wrong, even though the year-over-year direction happened to hold.
-  Consistent with impeller wear or pipe fouling raising the system
-  friction curve. Worth tracking in 2025+: a continuing climb would be an
-  early wear signal worth acting on before failure.
+    fall, in both 2023 and 2024. Moot anyway — Casey keeps the pond at
+    ~100% at all times, so suction head doesn't vary; pond level is ruled
+    out as a driver of either the seasonal or the year-over-year pattern.
+  - **Leading hypothesis: aging motor run capacitors**, not impeller wear.
+    The WEG motor is single-phase capacitor-run (nameplate: `CAP.: 2x216-
+    259uF 250V + 1x30uF 400V`) — capacitance drifting down over a couple
+    of years is a well-known, common cause of exactly this signature
+    (creeping current draw for the same mechanical load). Cheap to check:
+    a multimeter capacitance test (or an amp-draw check vs. the Sep 2024
+    baseline) takes minutes; the caps are a ~$30 part if they've drifted
+    out of the 208-230V-rated tolerance band.
+  Worth tracking in 2025+: a continuing climb is the signal to act on
+  before something fails outright.
+  - 2024-09-11's double switch (9am + an extra ~8pm switch, back to a
+    lower plateau) is confirmed against the real Sense UI chart, not just
+    a hover artifact — Casey: "looks clean" (no outage, just an extra
+    event that evening).
 - One anomaly day (2024-09-11) shows two mid-day power steps instead of the
   usual single AM/PM split — a one-off event, not a mapping error.
 
