@@ -96,7 +96,21 @@ running → the delta is the pump's input power. Line-to-line deltas
 | line 4 (21) | ~4.9 kW | ~100% |
 | line 4 + lawn zone 1 | ~5.1–5.2 kW | into 1.15 SF |
 
-Measured: _pending_
+Measured (Sense pump-only CT, Sep 7–18 2024, 30 cursor points from Casey's
+screenshots):
+
+| Mode | kW | Motor load (of 4.9 kW nameplate) |
+|---|---:|---:|
+| line plateaus (4 lines + variation) | **4.41 / 4.53 / 4.62–4.65 / 4.74–4.75 / 4.81–4.82** | 90–98% |
+| Sep 11 daytime (anomaly) | ~5.4 | 110% — two lines at once? |
+| pump zones, 6:22–6:54 AM | **5.40–5.58** | 110–114% — at the 1.15 SF ceiling (5.6 kW) |
+| lawn zones, 7:16–7:38 AM/PM | 5.0–5.4 | +0.4–0.7 kW ≈ +30–55 GPM (more than the ~15–20 GPM from today's psi deltas — resolve with simultaneous psi + kW) |
+| morning line-switch spikes | ~6.2 (chart) | ~125% briefly — the open-before-close overlap; keep it short |
+
+Conclusion: the motor runs just under full load on every line; the morning
+pump zones sit right at the service-factor limit (why the original heaters
+dropped). Curve predictions (4.55–4.9 kW) matched the plateau band.
+Energy ≈ 4.7 kW × 24 h ≈ 113 kWh/day.
 
 ### Pump zones (mornings)
 
