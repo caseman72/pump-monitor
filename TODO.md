@@ -36,19 +36,41 @@ Design notes:
 
 ## 1a. Pressure observations (feedforward table data)
 
-Recycle valves closed unless noted. Transducer-calibrated psi.
-Naming: **house zones 1–4** (residential lawn, evenings) and **pump zones
-1–2** (irrigation, mornings ~5–6 am); **line N** = the long irrigation lines.
+Model: **base pressure per irrigation line + delta per lawn zone**. Lawn
+zones ride on whichever irrigation line is running, so their effect is a
+delta from that line's base, not an independent setpoint. Deltas are only
+roughly additive (a zone's draw shrinks slightly as base pressure falls);
+the PI trim absorbs that. Recycle valves closed unless noted;
+transducer-calibrated psi.
 
-| Date | Running | psi | Notes |
-|---|---|---:|---|
-| 2026-08-23 | irrigation line 1 (smallest long line) | 51.5 | steady |
-| 2026-08-23 | line 1 + house zone 1 (front lawn) | 47.4 | −4 psi from one residential zone; steady ±0.1 |
-| 2026-08-23 | line 1 + house zone 2 | 48.5 | house system has 4 zones, cycles 1→4 |
-| 2026-08-23 | line 1 + house zone 3 | _pending_ | |
-| 2026-08-23 | line 1 + house zone 4 | _pending_ | |
-| 2026-08-24 | line 1 + pump zone 1 | _pending_ | morning run ~5–6 am — read from HA history |
-| 2026-08-24 | line 1 + pump zone 2 | _pending_ | |
+Naming: **line N** = the long irrigation lines (line 1 = smallest/shortest);
+**lawn zones 1–4** (house system, evenings); **pump zones 1–2** (mornings
+~5–6 am). Casey: "lawn zone 1 (front) is my shortest long line" — to confirm
+exactly how zone 1 relates to line 1.
+
+### Base pressure per irrigation line
+
+| Line | Base psi | Date | Notes |
+|---|---:|---|---|
+| line 1 | 51.5 | 2026-08-23 | smallest of the long lines |
+| line 15 | _pending_ | | |
+| line 16 | _pending_ | | |
+
+### Lawn zone deltas (measured on line 1)
+
+| Lawn zone | psi observed | Delta | Date |
+|---|---:|---:|---|
+| zone 1 (front) | 47.4 | −4.1 | 2026-08-23 |
+| zone 2 | 48.5 | −3.0 | 2026-08-23 |
+| zone 3 | _pending_ | | |
+| zone 4 | _pending_ | | |
+
+### Pump zones (mornings)
+
+| Pump zone | psi observed | Delta vs line base | Date |
+|---|---:|---:|---|
+| pump zone 1 | _pending_ | | 2026-08-24, read from HA history |
+| pump zone 2 | _pending_ | | |
 
 ## 2. ICE wiring & policy decisions (open)
 
