@@ -54,6 +54,7 @@ exactly how zone 1 relates to line 1.
 | Line | Base psi | Date | Notes |
 |---|---:|---|---|
 | line 1 | 51.5 | 2026-08-23 | smallest of the long lines |
+| line 3 | ~54 (provisional) | 2026-08-19 | dial read ~62 with line 3 on; dial runs ~8 psi high vs transducer → ~54. Highest normal point seen; ~115 GPM on the curve. Confirm on the transducer next time line 3 runs |
 | line 15 | _pending_ | | |
 | line 16 | _pending_ | | |
 
