@@ -234,10 +234,19 @@ Findings:
 
 ### Pump zones (mornings)
 
-| Pump zone | psi observed | Delta vs line base | Date |
-|---|---:|---:|---|
-| pump zone 1 | _pending_ | | 2026-08-24, read from HA history |
-| pump zone 2 | _pending_ | | |
+| Pump zone | psi observed | Delta vs ~51.7 baseline | Duration | Date |
+|---|---:|---:|---:|---|
+| pump zone 1 | 47.2 | −4.5 | ~20 min | 2026-08-24, 5:47–6:07am, from HA history |
+| pump zone 2 | 47.8 | −3.9 | ~79 min | 2026-08-24, 6:08–7:27am — ~4x longer than zone 1 |
+
+Brief transition dip to ~43 psi at the zone1→zone2 switch (~6:07–6:08am,
+valve-switching transient, not sustained).
+
+**Lawn zone cross-check (same morning, 7:36am onward)**: lawn zone 1 read
+~47.6 psi (vs 47.4 psi the evening before) and lawn zone 2 read **48.5 psi
+— identical to the tenth** against the previous evening's reading. Strong
+confirmation the zone deltas are stable and time-of-day independent, good
+grounds to trust them for the feedforward table.
 
 ## 2. ICE wiring & policy decisions (open)
 
