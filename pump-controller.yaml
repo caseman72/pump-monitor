@@ -29,6 +29,19 @@ substitutions:
   # adds 2 x lawn_open_delay, measured at 10 s in the frame captures.
   lawn_open_delay: "5"
   field_a_overlap: "15"
+  #
+  # OVERLAP CONSTRAINT - run_duration MUST be > 2 x valve_overlap.
+  # The component keeps a pool of exactly TWO valve operators
+  # (sprinkler.h: "std::vector<SprinklerValveOperator> valve_op_{2}") and
+  # start_valve_() returns SILENTLY when both are busy - no log, no warning,
+  # the zone just never opens while the FSM marches on. With overlap, valve N
+  # and N+1 are both open during a handover, so valve N+2 needs valve N's
+  # operator back; that only holds if run_duration > 2 x overlap.
+  # Measured 2026-08-25: 30 s / 15 s (30 > 30 false) silently dropped zone 3;
+  # 60 s / 15 s ran all four, 45 s apart (= run_duration - overlap).
+  # Not a production risk - with unit_of_measurement "min" the smallest
+  # settable duration is 60 s vs a 15 s overlap - but it bites hard at the
+  # seconds timescale used for bench testing.
   wifi_ssid: "PLACEHOLDER"
   wifi_password: "PLACEHOLDER"
   ap_password: "PLACEHOLDER"
