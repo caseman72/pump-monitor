@@ -188,9 +188,11 @@ the controller:
     between pump and field — the nozzles see meaningfully less than the
     51 psi at the pump, so per-head flow is below the 5 GPM @ 50 psi spec.
     Lowers the flow estimate.
-  - **Transducer offset unverified**: the whole calc rests on the ~51 psi
-    reading. If it reads ~8 psi low (true ~59), head and efficiency both
-    jump. Not yet checked against a reference (see the pump-off test below).
+  - ~~Transducer offset unverified~~ **RESOLVED 2026-08-24**: a fresh Boshart
+    gauge at the pump reads ~50 psi and HA shows Pump Pressure 50.0 psi
+    (3.028 V) — they AGREE. The transducer is accurate; it was the OLD
+    permanent dial (the ~8-psi-high one) that was wrong. So no transducer
+    offset — this uncertainty is removed from the efficiency estimate.
   - **Pump packing** (replaced 2026, Casey): now at the standard ~1 drip/sec
     (properly adjusted, not over-tight) → NOT a drag factor for current
     efficiency. Only caveat: the 2024 Sense data predates it, so the old
@@ -458,12 +460,12 @@ screenshot reading needed for future line runs.
       ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
       (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
-- [ ] **Confirm which capacitor is installed.** The July 2025 replacement
-      may be the electrical shop's "ok" in-spec loaner, not the new one
-      Casey ordered — the new cap may still be in a box, uninstalled. Check,
-      and swap in the proper new cap if it hasn't been done. (A weak/loaner
-      cap would keep motor input slightly high — same signature as the
-      pre-2025 drift, just smaller.)
+- [x] **Capacitor RESOLVED 2026-08-24 with meter measurements.** Bad
+      original cap measured **18.3 µF** (vs 30 µF rating = 39% low →
+      definitively failed; hard confirmation of the 2022-24 power-drift
+      story). New **Titan Pro TRCF30, 30 µF 440/370 VAC** now installed.
+      The in-service loaner (measured 30.7 µF, in-spec) kept as backup;
+      the bad 18.3 µF cap kept for reference only.
 - [~] ICE High Trip is now an ALERT threshold only (relay not wired — see
       the decision at the top of section 1), so its exact value is no longer
       safety-critical. Left at 65 psi as a "pressure is unusually high"
