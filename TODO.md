@@ -176,57 +176,23 @@ the controller:
   50.3 psi (√P-corrected per-head flow; TDH = (gauge − 0.4 psi suction) × 2.31
   ≈ 117-118 ft across all lines — corrected suction geometry, was mistakenly
   ~107 ft with a wrong 5 psi boost).
-- **Efficiency estimate — INCONCLUSIVE, not a wear finding** (walked back
-  2026-08-24 after Casey flagged the missing variables): a first pass gave
-  ~49% pump efficiency (2.7 WHP hydraulic ÷ ~4.1 kW shaft), well below the
-  ~73% published — but that assumed pump flow = nozzle flow and a perfectly
-  calibrated transducer, and both are wrong:
-  - **Gasket leakage**: this is 3" aluminum latch-coupling irrigation pipe
-    (not glued PVC) — it leaks at every coupling/riser by design, so flow
-    THROUGH THE PUMP is higher than nozzle flow. Raises efficiency.
-  - **Main line friction**: ~1000 ft of 4"→3" mainline, 11 risers/openers,
-    between pump and field — the nozzles see meaningfully less than the
-    51 psi at the pump, so per-head flow is below the 5 GPM @ 50 psi spec.
-    Lowers the flow estimate.
-  - ~~Transducer offset unverified~~ **RESOLVED 2026-08-24**: a fresh Boshart
-    gauge at the pump reads ~50 psi and HA shows Pump Pressure 50.0 psi
-    (3.028 V) — they AGREE. The transducer is accurate; it was the OLD
-    permanent dial (the ~8-psi-high one) that was wrong. So no transducer
-    offset — this uncertainty is removed from the efficiency estimate.
-  - **Pump packing** (replaced 2026, Casey): now at the standard ~1 drip/sec
-    (properly adjusted, not over-tight) → NOT a drag factor for current
-    efficiency. Only caveat: the 2024 Sense data predates it, so the old
-    packing's condition is an unknown in that historical input.
-  Net: these push efficiency in both directions; plausibly ~50-65% =
-  a healthy pump. **No wear conclusion — the estimate has too many
-  unmeasured variables.** To measure it: the end-of-line gauge (below) gives
-  true nozzle pressure → nozzle flow straight off the Rainbird chart (no
-  catch-can needed — the nozzle IS the flow meter). The only thing the chart
-  can't give is TOTAL pump flow incl. gasket leakage; that needs a flow
-  meter at the pump or a pond-drawdown timing with the inlet valved off —
-  only worth it if the gauge-based efficiency still looks off.
-  - **Lateral gauge(s)** (Casey can do this): nozzle pressure is NOT one
-    value — it drops along the lateral as each riser draws water, so the
-    first head (nearest the mainline) is highest and the last head is
-    lowest. Best measurement is to bracket the lateral:
-      · gauge at the FIRST head and the LAST head of a running line;
-      · pump transducer − first-head = mainline loss (~1000 ft 4"→3");
-        first-head − last-head = lateral loss;
-      · representative nozzle pressure ≈ average of the two (flow ∝ √P, near
-        linear over a well-designed lateral's ~±10% band) → GPM/head off the
-        Rainbird chart × head count = total nozzle flow. (5 GPM is specced AT
-        the nozzle; e.g. avg 45 psi → ~5×√(45/50) ≈ 4.7 GPM/head.)
-      · one gauge at the end only = the MINIMUM nozzle pressure (lower bound
-        on flow) but still gives total pump→field loss.
-  - ~~Pump-off transducer zero check~~ — DROPPED (Casey, 2026-08-24): at the
-    corrected 1-ft geometry the signal is ~0.4 psi, below the transducer's
-    useful resolution, so it can't reveal an 8 psi offset, and the line
-    drains below the pump and fades to zero anyway. Tells us nothing. And
-    for CONTROL the transducer's absolute accuracy barely matters — the
-    system reacts to changes and relative thresholds; an 8 psi consistent
-    offset just shifts the frame. Absolute accuracy only mattered for the
-    pump-curve efficiency comparison, which is now academic (pump kill is
-    not being wired — see the decision below).
+- **Efficiency RESOLVED 2026-08-24 with measured first/last-head + pump
+  pressures on line 4 (21 heads, 5/32" Rainbird = 5.0 GPM @ 50 psi):**
+  - Pump gauge 49 psi (HA transducer 50.0 — agree; transducer confirmed
+    accurate, see above). Pipe-0 (field entry) 45.2, pipe-21 (last head)
+    44.0.
+  - **Mainline loss = 3.8 psi** (pump→field, ~1000 ft 4→3"); **lateral
+    loss = 1.2 psi** across all 21 heads (very even — heads run within ~1
+    psi of each other, so flow is nearly uniform end to end).
+  - Nozzle pressure ~44.6 psi avg → **4.72 GPM/head → ~99 GPM** nozzle flow.
+  - TDH ≈ 112 ft → hydraulic ≈ 2.1 kW ÷ ~4.1 kW shaft = **≥51% pump
+    efficiency** (nozzle-flow lower bound; real pump flow ≥ nozzle flow due
+    to gasket leakage, so with 10-20% leakage efficiency is **~56-62%**).
+  - **Verdict: healthy pump running slightly off-BEP. No wear.** The earlier
+    ~49% "possible wear" flag is retired — it was under-counting flow
+    (nozzle≠pump) and assuming an unverified transducer; both now fixed.
+    Combined with the confirmed-failed cap (18.3 µF), fresh cap, and packing
+    at spec, nothing points at pump wear.
 
 **COID delivery cut (2026-08-24, from Central Oregon Irrigation District):**
 Deschutes River natural flows are dropping; COID is reducing deliveries to
