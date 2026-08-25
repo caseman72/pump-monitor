@@ -131,10 +131,14 @@ Design notes:
   open just enough to bleed excess pressure and closing as load returns —
   smoother and less wasteful than open/shut. The "threshold" is the setpoint
   the loop holds under, not a trip.
-- **Upcoming low-flow data** (Casey, next few days): running 14 heads (and
-  12 if he gets to it) will add points to the pressure-vs-heads curve, which
-  currently has only 18 (51.7) & 21 (50.3) — too clustered to extrapolate to
-  the 6-7 head zones. 14/12 fill the lower end and pin the recycle setpoint.
+- [ ] **Low-flow pressure tests — Casey to run 2026-08-25 (tomorrow).**
+  Run reduced-head sets and read the steady pump pressure to extend the
+  pressure-vs-heads curve (currently only 18 = 51.7, 21 = 50.3 psi — too
+  clustered to extrapolate to the small zones). Targets: **14 heads** (7+7),
+  **12** (6+6) if convenient, and ideally the **6-head** smallest line and a
+  brief **13**. Each fills the lower end of the curve and pins the recycle
+  setpoint. Tell Claude roughly when each ran; pull the plateaus from the
+  recorder via `tools/ha_pressure.py`.
 - **Recycle-open threshold is a PRESSURE, not a flow** — the sensor reads
   pressure, and low flow shows up as HIGH pressure (pump climbing toward
   shutoff). So recycle opens ABOVE a pressure threshold, which must sit
