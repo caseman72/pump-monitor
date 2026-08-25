@@ -188,6 +188,15 @@ the controller:
   - TDH ≈ 112 ft → hydraulic ≈ 2.1 kW ÷ ~4.1 kW shaft = **≥51% pump
     efficiency** (nozzle-flow lower bound; real pump flow ≥ nozzle flow due
     to gasket leakage, so with 10-20% leakage efficiency is **~56-62%**).
+  - **Line 4 is the WORST case** — longest line (21 heads, 3 more than lines
+    1/2 at 18, 2 more than line 3 at 19). So these loss numbers are the
+    ceiling: shorter lines have LESS mainline loss (less flow), LESS lateral
+    loss (fewer heads), and HIGHER nozzle pressure → more GPM/head + even
+    more uniform distribution. Confirmed by the pump-gauge data: line 1
+    (18) ran 51.7 psi at the pump vs line 4 (21) at 50.3 — shorter = ~1-1.5
+    psi higher. (Pump EFFICIENCY is ~the same across all four, though — they
+    cluster in a tight 50.3-51.7 psi / ~86-99 GPM band, all the same healthy
+    point on the curve.)
   - **Verdict: healthy pump running slightly off-BEP. No wear.** The earlier
     ~49% "possible wear" flag is retired — it was under-counting flow
     (nozzle≠pump) and assuming an unverified transducer; both now fixed.
