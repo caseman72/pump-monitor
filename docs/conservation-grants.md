@@ -35,10 +35,15 @@ USDA NRCS runs a **Deschutes-County-specific** EQIP initiative for on-farm
 irrigation + energy efficiency (sprinkler irrigation and energy efficiency
 improvements are explicitly in its prioritization questions).
 
-- 🗓️ **DEADLINE: January 15, 2026** — the national FY2026 batching date for
-  EQIP (and CSP/ACEP). Applications are accepted continuously, but anything
-  after the cutoff rolls to the **next** funding cycle. Competitive: popular
-  practices can exhaust funding within a cycle.
+- 🗓️ **Deadline status — CORRECTED 2026-08-24.** The widely-cited
+  **January 15, 2026** national batching date was the **FY2026** round,
+  which has already **passed** (today is Aug 2026 — I initially quoted it as
+  if upcoming; that was wrong). Applications are accepted continuously, so
+  applying now lands in the **FY2027** cycle. If NRCS keeps the same
+  pattern the next batching date would be ~**January 15, 2027**, but
+  **do not rely on that** — confirm the current ranking date with the
+  Redmond/Deschutes field office. Competitive: popular practices can
+  exhaust funding within a cycle, so earlier in the cycle is better.
 - ✅ **ELIGIBILITY — CONFIRMED GOOD.** Casey raises **meat cattle and files
   a Schedule F**, so he is a bona fide agricultural producer, which is what
   EQIP requires. Bonus: the irrigation waters *livestock pasture*, a
@@ -85,9 +90,12 @@ Confirmed **2026 incentives are active**. Relevant to this project:
 
 ## Recommended sequence
 
-0. ⏰ **Time-critical: the EQIP round closes January 15, 2026.** If EQIP is
-   in play, start with NRCS + FSA (farm number) now — the county cost-share
-   and Energy Trust have no comparable hard deadline.
+0. ⏰ **EQIP timing:** the FY2026 round already closed (Jan 15, 2026), so an
+   application now targets **FY2027** — likely batching ~Jan 2027, to be
+   confirmed with the field office. That's actually good news: there's time
+   to do the site visit and conservation plan properly rather than rushing.
+   Still start early — the plan + FSA farm number take time, and funding is
+   competitive within a cycle.
 1. **Call COID first: 541-548-6047** (or Baxter Davies, 541-550-6834). Ask
    (a) is the county on-farm efficiency cost-share still funded for 2026,
    (b) is this property on a lateral scheduled for district piping — that
