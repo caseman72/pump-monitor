@@ -125,6 +125,16 @@ Zones (on `Pump Pressure`):
 | **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
 
 Design notes:
+- **Recycle is PROPORTIONAL, not all-or-none** (Casey, 2026-08-24): the
+  valves are 0-100%, so the controller MODULATES the recycle opening to
+  hold pressure below the setpoint (a trim loop on pulse position), cracking
+  open just enough to bleed excess pressure and closing as load returns —
+  smoother and less wasteful than open/shut. The "threshold" is the setpoint
+  the loop holds under, not a trip.
+- **Upcoming low-flow data** (Casey, next few days): running 14 heads (and
+  12 if he gets to it) will add points to the pressure-vs-heads curve, which
+  currently has only 18 (51.7) & 21 (50.3) — too clustered to extrapolate to
+  the 6-7 head zones. 14/12 fill the lower end and pin the recycle setpoint.
 - **Recycle-open threshold is a PRESSURE, not a flow** — the sensor reads
   pressure, and low flow shows up as HIGH pressure (pump climbing toward
   shutoff). So recycle opens ABOVE a pressure threshold, which must sit

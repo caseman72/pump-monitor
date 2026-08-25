@@ -92,6 +92,14 @@ limit.
   allows, ~10 heads/line (20 total) sits closest to BEP; the ≤8 target is
   presumably driven by pipe sizing / per-head pressure rather than pump
   match. (See the pump curve + flow notes in `TODO.md`.)
+**Zone building blocks & schedules:**
+- 6 heads = smallest line. 12 = two 6-head lines. 13 = 12 + 1. 7 = a line.
+  14 = two 7-head lines.
+- **Near-term (current pipe, manual valves):** run **12, 13, 7, 14** on
+  **12-hour** sets.
+- **Fully automated (underground + automated valves):** run **6, 6, 6, 7,
+  7, 7, 7** (seven small zones, 46 heads total) on **4-hour** timers.
+
 - Field E becomes **two zones**: outside (5 + 2 = 7) and inside (4 + 3 = 7).
 - The sketch's zone divisions are the intended automation breakup; the
   per-line head counts are the current reality.
