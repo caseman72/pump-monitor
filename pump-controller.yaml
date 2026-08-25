@@ -38,6 +38,26 @@ substitutions:
 esphome:
   name: pump-controller
   friendly_name: Pump Controller
+  on_boot:
+    # Battery test for the DS3231: read the CHIP (RealTimeClock::now() only
+    # reports system time - ds1307.read_time is what actually talks to 0x68)
+    # and latch it before SNTP has a chance to correct anything. A dead coin
+    # cell still ACKs on i2c, so presence in the bus scan proves nothing; this
+    # boot value after a power cut is the real evidence.
+    priority: -100
+    then:
+      - ds1307.read_time: rtc_time
+      - lambda: |-
+          // Report the RAW chip contents, valid or not: ESPTime::is_valid()
+          // rejects year < 2019, so a never-written RTC (2000-01-01) would
+          // otherwise just read "INVALID" and hide which failure it is.
+          // 2000-01-01 = never set / lost power. A real date = battery held.
+          auto t = id(rtc_time).now();
+          char buf[72];
+          snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d%s",
+                   t.year, t.month, t.day_of_month, t.hour, t.minute, t.second,
+                   t.is_valid() ? "" : "  <- unset/invalid");
+          id(rtc_boot_time) = std::string(buf);
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -111,7 +131,23 @@ switch:
     restore_mode: ALWAYS_OFF
     pin: {pca9554: relay_expander, number: 6, mode: OUTPUT}
 
+time:
+  - platform: ds1307          # the DS3231 at 0x68 - register-compatible
+    id: rtc_time
+    timezone: America/Los_Angeles
+    update_interval: never    # only read on demand, never clobber system time
+  - platform: sntp
+    id: net_time
+    timezone: America/Los_Angeles
+    on_time_sync:
+      then:
+        - ds1307.write_time:            # push good network time into the chip
+            id: rtc_time
+
 globals:
+  - id: rtc_boot_time
+    type: std::string
+    initial_value: '"(not read)"'
   - id: lawn_prev_running
     type: bool
     initial_value: "false"
@@ -402,6 +438,12 @@ sensor:
     entity_category: diagnostic
 
 text_sensor:
+  - platform: template
+    name: "RTC Time At Boot"
+    icon: "mdi:clock-check-outline"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: 'return {id(rtc_boot_time)};'
   - platform: wifi_info
     ip_address:
       name: "IP Address"
