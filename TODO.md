@@ -69,6 +69,19 @@ it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
+> **Design principle — recycle is PROTECTION/RELIEF, not efficiency
+> (2026-08-24, Casey asked "open recycle at 14 heads?"): NO.** This pump's
+> input power rises with flow, so adding recycle to push flow back toward
+> BEP spends MORE kWh to deliver the SAME irrigation — the extra flow goes
+> to the pond, wasted. Pump efficiency % goes up but useful-water-per-kWh
+> goes DOWN. At 14 heads (~70 GPM ≈ 70% of BEP) the pump is healthy: well
+> above its minimum continuous flow (~25-40 GPM), pressure ~55 psi (below
+> the ~65 dead-head and far under the 150 psi pipe rating), and the pond
+> stays full on its own. So do NOT recycle for "efficiency." Recycle earns
+> its keep ONLY near the pump's minimum flow / dead-head — i.e. automated
+> zone transitions where all heads briefly close, or a genuinely tiny load.
+> That is the relief role the staged controller below implements.
+
 > **DECISION 2026-08-24 — the ICE pump-kill relay is NOT being wired into
 > the pump loop this year, and maybe ever.** Solid reasons (Casey):
 > *stopping* the pump is itself the risky/expensive act (~$500 to recover,
