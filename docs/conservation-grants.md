@@ -35,17 +35,33 @@ USDA NRCS runs a **Deschutes-County-specific** EQIP initiative for on-farm
 irrigation + energy efficiency (sprinkler irrigation and energy efficiency
 improvements are explicitly in its prioritization questions).
 
-- Applications accepted **continuously**, but ranked on **state-specific
-  ranking dates** — you must apply before the cutoff to be in the current
-  funding cycle. **The 2026 Oregon ranking date was not published in the
-  sources found — confirm with the local field office.**
-- Cost-share assistance for eligible agricultural producers; a local
-  conservationist does a free site visit and helps build the application.
-- ⚠️ Eligibility likely requires qualifying as an **agricultural producer**
-  (farm number / ag use) — confirm; this may be the gating question for a
-  property this size.
-- Next step: contact the **Redmond/Deschutes County NRCS field office** for
-  the ranking date and an eligibility check.
+- 🗓️ **DEADLINE: January 15, 2026** — the national FY2026 batching date for
+  EQIP (and CSP/ACEP). Applications are accepted continuously, but anything
+  after the cutoff rolls to the **next** funding cycle. Competitive: popular
+  practices can exhaust funding within a cycle.
+- ✅ **ELIGIBILITY — CONFIRMED GOOD.** Casey raises **meat cattle and files
+  a Schedule F**, so he is a bona fide agricultural producer, which is what
+  EQIP requires. Bonus: the irrigation waters *livestock pasture*, a
+  well-established EQIP resource concern (irrigation efficiency on
+  pastureland) — a much stronger case than a landscaping/hobby framing.
+- **Prerequisite: an FSA farm number** is required *before* applying. If we
+  don't have one, contact the local **FSA** office early — this is the long
+  pole for hitting Jan 15.
+- **Forms** (the local planner walks you through these): CPA-1200
+  (application), AD-2047 (customer data), CCC-941 (AGI), AD-1026 (HEL/
+  wetland), CCC-902 (farm operating plan), CCC-860 if claiming
+  beginning/veteran/limited-resource/socially-disadvantaged status (those
+  categories get higher payment rates).
+- Process: local NRCS **conservation planner visits the property**, walks it
+  with you, then writes a conservation plan of practices addressing the
+  resource concerns — that plan is what gets funded.
+- Relevant practice codes to ask about: **430 Irrigation Pipeline**,
+  **442 Sprinkler System**, plus pumping-plant/energy practices. Oregon
+  publishes a **payment schedule** with per-unit rates (per foot, per acre);
+  ask the planner for the FY2026 Oregon schedule for these codes.
+- Next step: contact the **Redmond/Deschutes County NRCS field office** —
+  free site visit, confirm Oregon's ranking date vs. the Jan 15 national
+  date, and get the payment-schedule rates.
 
 ## Energy Trust of Oregon — equipment incentives (not a grant, but stackable)
 
@@ -69,6 +85,9 @@ Confirmed **2026 incentives are active**. Relevant to this project:
 
 ## Recommended sequence
 
+0. ⏰ **Time-critical: the EQIP round closes January 15, 2026.** If EQIP is
+   in play, start with NRCS + FSA (farm number) now — the county cost-share
+   and Energy Trust have no comparable hard deadline.
 1. **Call COID first: 541-548-6047** (or Baxter Davies, 541-550-6834). Ask
    (a) is the county on-farm efficiency cost-share still funded for 2026,
    (b) is this property on a lateral scheduled for district piping — that
@@ -90,3 +109,6 @@ Confirmed **2026 incentives are active**. Relevant to this project:
 - Target: **~½ the water** after conversion (`docs/fields.md`).
 - Timeliness: **COID cutting deliveries to ~60%** in 2026 — conservation is
   exactly what the district wants to fund.
+- **Agricultural standing: meat cattle, Schedule F filer** — establishes
+  producer eligibility and frames the project as irrigation efficiency on
+  livestock pasture.
