@@ -86,11 +86,12 @@ to this pump than the previous owner's 16-head standard (slightly low-flow
 of ideal). Head counts above ~21 would push past BEP toward the 5 HP motor
 limit.
 
-
-
-- Target **≤ 8 heads per line** so that **two lines can run at once**
-  (~16 heads total — right at the pump's sweet spot; see the pump curve
-  notes in `TODO.md`).
+- Target **≤ 8 heads per line** so that **two lines can run at once**.
+  Note: two 8-head lines = 16 heads ≈ 76 GPM, which is slightly BELOW the
+  pump's BEP (~100 GPM ≈ 21 heads at ~4.7 GPM/head). If pipe/head capacity
+  allows, ~10 heads/line (20 total) sits closest to BEP; the ≤8 target is
+  presumably driven by pipe sizing / per-head pressure rather than pump
+  match. (See the pump curve + flow notes in `TODO.md`.)
 - Field E becomes **two zones**: outside (5 + 2 = 7) and inside (4 + 3 = 7).
 - The sketch's zone divisions are the intended automation breakup; the
   per-line head counts are the current reality.
