@@ -62,6 +62,32 @@ Zones of **7, 7+1 = 8, 7** heads; **zones 2 + 3 currently run together
 
 ## Future automation plan
 
+Planned run patterns (both keep the pond full — usage balances with COID
+inflow + recycle):
+- **Field A**: 18 heads, then 7 + 7 (14).
+- **Field B**: 7 + 7 (14).
+
+**Underground conversion goal (~½ the water).** Converting the aluminum
+latch-pipe + impact heads to underground **glued PVC** with in-ground
+**Falcon** heads is expected to cut water use roughly in half:
+- glued PVC eliminates the gasket leakage entirely (measured: the laterals
+  leak — see the line-4 loss data in TODO.md);
+- in-ground Falcon heads are more efficient than aging impacts;
+- proper spacing cuts overlap waste.
+Pursuing a **COID grant** to help fund it — the district funds on-farm
+efficiency/piping conversions, and with COID cutting deliveries to ~60%
+(2026), conservation projects are exactly what they want to support. The
+measured leakage + per-line flow data is real supporting evidence for an
+application.
+
+Pump-match note: the pump's BEP flow is ~100 GPM; the current 18-21 head
+lines (~86-99 GPM) sit right in that sweet spot, so they are better matched
+to this pump than the previous owner's 16-head standard (slightly low-flow
+of ideal). Head counts above ~21 would push past BEP toward the 5 HP motor
+limit.
+
+
+
 - Target **≤ 8 heads per line** so that **two lines can run at once**
   (~16 heads total — right at the pump's sweet spot; see the pump curve
   notes in `TODO.md`).
