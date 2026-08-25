@@ -1,0 +1,9 @@
+Line 1 : 18 6 +8+1 +3
+Line 2: 18 6 +8 + 4
+11:14 ~ 51.6 (same as 1) 
+Line 3: 19 6 +8+5 
+11:21 52.2 with 1 sprinkler off. Fixing sprinkler now. 5/32 nozzles. 19 on 51.4
+
+Line 4: 21 6 +8+1 + 6
+
+11:40 50.3 psi
