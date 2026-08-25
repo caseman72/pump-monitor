@@ -249,6 +249,19 @@ to the pond, so the recycle-to-pond strategy has to account for a pond
 that may not refill as fast, and total irrigation may need to be rationed.
 Worth wiring pond level into HA eventually so the controller can see it.
 
+  **Water-balance synthesis (Casey, 2026-08-24):** at 60% delivery, the
+  forced response is to WATER LESS (fewer heads / shorter runs) to match
+  reduced inflow — else the pond drains. That's the efficient response
+  (pump less → save pond AND energy). Recycling does NOT help the pond
+  (net-zero: pond→pump→pond) and costs energy, so it's the wrong tool for
+  the water shortage. BUT watering less = smaller loads = pump runs nearer
+  its low-flow edge, so recycle's PROTECTION role becomes more relevant: it
+  ENABLES running small conservation-driven loads without dead-heading the
+  pump. Keep it minimal (proportional trim), never a way to "use up" water.
+  The structural fix for sustained cuts is the underground conversion
+  (~½ the water, see docs/fields.md) — that's what lets 60% delivery
+  actually cover the need.
+
 ### Pump maintenance history (for context on motor margin)
 
 Two separate events, not one visit — corrected 2026-08-24 after conflating
