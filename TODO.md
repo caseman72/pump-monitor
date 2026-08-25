@@ -125,6 +125,18 @@ Zones (on `Pump Pressure`):
 | **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
 
 Design notes:
+- **Recycle-open threshold is a PRESSURE, not a flow** — the sensor reads
+  pressure, and low flow shows up as HIGH pressure (pump climbing toward
+  shutoff). So recycle opens ABOVE a pressure threshold, which must sit
+  between the smallest normal zone's pressure and dead-head (~65 psi).
+  We have only 2 measured points (18 heads = 51.7, 21 = 50.3 psi) — too
+  clustered to extrapolate reliably to low flow (the curve steepens near
+  shutoff). Rough estimates: 6-7 head zone ~58-60 psi, dead-head ~65, so a
+  PROVISIONAL threshold ~61-62 psi — but DO NOT bake that in. Set it from
+  measurement: (a) run the smallest zone you'll actually use and read its
+  steady pressure, (b) slow main-valve close for true dead-head, (c) set
+  the threshold ~3-4 psi above the smallest-zone pressure. The roadmap's
+  stress test (section 0) produces both numbers directly.
 - Valve response uses the pulse primitive (no re-home transient); the
   order is Valve 1 to 100% before Valve 2 starts.
 - Below 30 psi (Yellow-low) is the dry-run / line-break side — response TBD
