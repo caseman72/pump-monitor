@@ -540,3 +540,92 @@ screenshot reading needed for future line runs.
 - [ ] Pressure: transducer trusted over the dial (~8 psi apart at the same
       tap; moving the transducer to the main leg won't change a dead-end
       reading). Next pump-off: check both read 0.
+
+## 6. Thermal relief valve — passive dead-head backstop (2026-08-25)
+
+> **Why not a pressure relief valve.** This pump can't make dangerous
+> pressure: shutoff is ~65 psi against 150 psi pipe (2.3x margin).
+> Overpressure isn't the failure mode — **zero flow is**, and its symptom is
+> heat, not pressure. Worse, pressure is a weak discriminator here: normal
+> small-zone operation runs 61–62 psi and dead-head is ~65, so a mechanical
+> relief valve would have to sit in a **~3 psi window**. Commercial spring
+> relief valves are ±3–5% on set point (±2–3 psi at these pressures), so it
+> would either weep continuously during normal runs or never crack at all.
+> (A rupture disc is worse — stays open once burst.) A **thermal** relief
+> valve triggers on the actual damage mechanism instead of a proxy that
+> barely moves.
+
+Layers, each catching what the others structurally cannot:
+
+1. **pump-monitor recycle** — normal operation, holds flow near BEP
+2. **ICE-high** — cuts the pump on a pressure excursion it *can* see
+3. **Thermal relief valve** — fully passive; fires on heat when everything
+   electronic has failed. No power, no logic, no network.
+
+### Sizing (checked 2026-08-25 — the small valve is enough)
+
+- Heat load at dead-head: BEP ~100 GPM @ ~52 psi → TDH ~119 ft → ~3.0 WHP;
+  at 73% eff ~4.1 BHP. A centrifugal at shutoff draws roughly half to
+  two-thirds of BEP power → **~2.5 HP ≈ 6,400 BTU/hr** into trapped water.
+- Flow to carry it, `GPM = BTU/hr ÷ (500 × ΔT)`: **0.6 GPM** at 20 °F rise,
+  **1.3 GPM** at 10 °F.
+- Flow available: the valve's 1/8" outlet is the restriction — orifice flow
+  at 60 psi is **~2 GPM**, i.e. 2–3x what's needed. The "10% of BEP"
+  rule-of-thumb (10 GPM) is conservative by ~an order of magnitude at 5 HP.
+- Time to trip: ~1.5 gal of casing water needs ~875 BTU to rise 70 °F →
+  **~8 min** of true dead-head. Mechanical seals suffer north of
+  160–200 °F, so a 140 °F set point leaves real margin.
+- Data point: neighbour Rick dead-heads a 7.5 HP pump ~8 hr/day on a
+  **continuous** bypass with no ill effect — consistent with the thermal
+  minimum being small. (A continuous bypass was considered and rejected
+  here: it wastes pumping energy every hour of every day to guard an event
+  that should never happen.)
+
+### Parts
+
+- [ ] Thermal relief valve, 140 °F, 1/4" MPT in x 1/8" NPSF out, brass,
+      Viton/Buna, SS spring. J.E. Adams listed it but shows *Product
+      Unavailable*; same device sells as a pressure-washer thermal relief —
+      Cat Pumps 7803, General Pump 100573, etc.
+- [ ] Fitting chain to get from the valve to 1/4" copper (ordered):
+      valve `1/8-27 NPSF` (female, **straight** thread — sealed by a tapered
+      male, so 1/8" NPT male is the correct mate, with PTFE tape)
+      ← `1/8" NPT male — 1/4" NPT male` hex adapter
+      ← `1/4" NPT female — 1/4" SAE flare male` adapter
+      ← flare nut + **1/4" OD copper** (~0.19" ID, so the tubing does NOT
+      restrict — the 0.125" valve orifice stays the limiting element).
+- [ ] Mount on the **discharge port at the pump** so it sees casing water.
+      Out on the mainline it would sit in stagnant water and never heat.
+- [ ] Route the copper under the pump house. NOTE: it discharges **hot
+      water, not steam** — 140 °F at 60 psi stays liquid (needs 212 °F to
+      flash) — but it's a jet at line pressure, so aim it deliberately.
+- [ ] Annual: pull, clean and warm-store the valve at winterization along
+      with draining the housing. Pond water is Deschutes-fed and clean, so
+      fouling risk is low, but a backstop you never verify is an *assumed*
+      backstop.
+
+### Make the event observable (temp probe → pump-monitor)
+
+The valve fires only when everything else has already failed, and it can
+open, do its job, and reseat with no trace. Evidence matters as much as
+protection.
+
+- [ ] **DS18B20 clamped to the copper discharge line** (thermal paste +
+      insulation wrap; surface-mount tracks the water within a few degrees,
+      which is plenty for detecting a ~70 °F excursion). `one_wire:` bus +
+      `dallas_temp` sensor, one GPIO + 4.7 kΩ pull-up. See also the DS18B20
+      item in section 5.
+- [ ] **Put it on pump-monitor, not pump-controller** — that node owns the
+      protection model (ICE latch, trip reason, pressure), so a thermal trip
+      belongs in the same alert scheme, and it can correlate: pressure
+      pinned near shutoff *and* the relief line hot is an unambiguous
+      dead-head signature.
+- [ ] **Latch it**, same pattern as ICE Tripped: a `restore_value: true`
+      global that trips above **~100 °F** (well above solar warming, well
+      below the valve's 140 °F) and *stays* tripped, plus a stored
+      timestamp, until an explicit reset. The DS3231 (validated 2026-08-25
+      through a real power cut) makes that timestamp trustworthy even if the
+      event happens during a network outage.
+- [ ] Freebie: the same probe reads pump-house ambient the other 99.99% of
+      the time → **freeze detection** in shoulder season, on a system that
+      gets winterized annually.
