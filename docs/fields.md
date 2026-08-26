@@ -250,7 +250,10 @@ vacations etc. They also produce the before/after data for the C-E grant.
       water"). **Recommended: A with #10** — 4 zones stay on the board,
       the extra head pushes #10 into the 60-100 window, and #10's gentler
       rate suits a pooling pasture. B is better coverage but costs a 5th
-      relay a pasture doesn't need.
+      relay a pasture doesn't need. **If B is chosen, the 5th relay
+      exists: pump-monitor's REL5/REL6 has one in the ICE loop and one
+      spare (Casey, 2026-08-25).** Open — not decided yet; talking it out.
+      Nothing here needs solving now.
 
   - Casey likes 40 ft (Rick uses 30; the hand lines run 40 ft pipe at 50 ft
     between lines). **40 ft doesn't fit 4 zones with any nozzle** — 49
