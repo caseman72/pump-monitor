@@ -278,6 +278,12 @@ Design notes:
       corrected 1-ft suction geometry predicts (~0.4, within noise) and
       proof there's no large offset. Together with the Boshart gauge
       agreement at 50 psi, the transducer is confirmed at both ends.
+      **2026-08-26 head-count sweep (Casey's protocol, in progress):** IR
+      pump housing → off A-1 (leaves B-3 = **7 heads**) → on A-4 + A-3, off
+      B-3 (**12**) → off 2 heads (**10**) → on 2 (**12**) → off A-3 for 60 s
+      (**6**) → on A-3 + A-2 (**18**) → IR pump housing. Predictions on
+      record from the fitted curve: 7 → ~59.6, 12 → ~56.8, 10 → ~58.1,
+      6 → ~60.0, 18 → ~52.8 psi.
       Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
       6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
       curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
