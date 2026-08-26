@@ -257,6 +257,18 @@ it earn the right to run Field A's automated zones un-manned.
 > only confirm it with a worse gauge). Thermal overloads remain the peace-
 > of-mind layer.
 
+> **2026-08-26 ~11:50 — TRANSDUCER MOVED to the pump discharge (Casey) and
+> the DH test re-run.** Pump started straight into DH (main closed, both
+> CVs full open): 0.5 → 22 → 52 → 60.1 psi in 6 s, start overshoot 60.8,
+> then **~60.3 psi held ~6 min** (11:50-11:56). Matches the gauge's 60 —
+> the transducer now reads the pump, prediction confirmed at the source.
+> Then a line opened with CVs still open → **47.2**; CVs closed → **49.3**
+> (18 heads A-2/3/4, 77 min steady; was 49.8 at the old location).
+> → **Both CVs wide open pull only ~2 psi at 18 heads**; recycle capacity
+> is 10-30 GPM class (curve is flat near shutoff, so DH+recycle sits ~60).
+> Images Casey sent did not arrive; the "false value" reference is TBC
+> (likely the 60.8 start overshoot or an HA display artifact).
+
 > **Design principle — recycle is PROTECTION/RELIEF, not efficiency
 > (2026-08-24, Casey asked "open recycle at 14 heads?"): NO.** This pump's
 > input power rises with flow, so adding recycle to push flow back toward
