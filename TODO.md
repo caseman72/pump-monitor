@@ -797,6 +797,14 @@ observable.
       | Cat 7143 | 165 °F | 1/4" NPT(M) — too hot for us |
       | 7141/7142/7144/7145 | 145/145/165/165 | 3/8" / 1/2" — won't fit |
       ~$40-45 retail, typically "ships in 2 weeks."
+      **J.E. Adams = model 7685** (retailer specs, 2026-08-25): 125 psi,
+      **max discharge 2.5 GPM**, opens ~140 °F, **reseats ~115 °F**, dumps
+      for 2-10 s then closes. Vendor-side confirmation of the ~2 GPM
+      orifice estimate. Margin check: 2.5 GPM is at 125 psi; flow ∝ √ΔP so
+      at our ~61 psi it's ~1.75 GPM vs the ~1.3 GPM thermal minimum —
+      ~1.3x, adequate for a backstop (the 1/2" recycle at ~8 GPM is the
+      primary, ~6x). The 140/115 hysteresis makes a firing a distinct
+      pulse on the discharge copper — what the temp sensor would catch.
       ⚠️ Earlier notes cited "Cat 7803" and "General Pump 100573" — those
       part numbers don't exist; corrected here.
       ⚠️ Datasheet: *"if used in a tank fed system the thermal valve will
