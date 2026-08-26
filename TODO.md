@@ -200,6 +200,33 @@ it earn the right to run Field A's automated zones un-manned.
 > it will show whether 32 GPM at 60 psi is genuinely benign. Pairs with the
 > thermal relief valve in section 6.
 
+> **ARCHITECTURE — expected-pressure / residual alarm (Casey, 2026-08-26).**
+> The controller KNOWS the commanded state, so it alarms on
+> **measured − expected**, not on a fixed threshold. Expected comes from
+> the proven-additive feedforward table `base(line) + offset(lawn zone)`.
+>
+> | known state | expected psi | measured | meaning → action |
+> |---|---:|---|---|
+> | no lines, recycle open | ~60 | 60 | normal — dead-head-SAFE, no alarm |
+> | line X + lawn Y | base(X)+offset(Y) ≈ 45-56 | matches | normal |
+> | line X commanded | ~50 | **60** | line didn't open → open CVs → still 60 → **fault → stop pump (last step)** |
+> | line X commanded | ~50 | **35** | broken pipe / burst → alarm |
+>
+> This dissolves the 58-vs-60 ambiguity: 60 is fine when nothing SHOULD be
+> running and a fault when something should. The sprinkler node knows
+> what's commanded; pump-monitor knows pressure; HA joins them. (ICE at 58
+> remains the interim dumb alert until this exists.)
+>
+> **Other 2026-08-26 notes:** recycle-open "dead-head" is a ~33 GPM
+> low-flow state, not a dead-head — nothing to stress, which is why IR
+> didn't move in 1 min. **Repeat after the transducer move with a 5-10 min
+> hold + IR** (safe because recycle flows; NEVER recycle-closed +
+> main-closed). A second 1/2" recycle line is NOT needed for protection
+> (only for pulling pressure lower, which isn't wanted). A constant-bypass
+> DH test is already answered: recycle-only = 60 psi (Rick's rig would
+> only confirm it with a worse gauge). Thermal overloads remain the peace-
+> of-mind layer.
+
 > **Design principle — recycle is PROTECTION/RELIEF, not efficiency
 > (2026-08-24, Casey asked "open recycle at 14 heads?"): NO.** This pump's
 > input power rises with flow, so adding recycle to push flow back toward
