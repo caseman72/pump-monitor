@@ -767,6 +767,22 @@ Layers, each catching what the others structurally cannot:
   here: it wastes pumping energy every hour of every day to guard an event
   that should never happen.)
 
+### Cross-check vs the recycle line (2026-08-25)
+
+Product page confirmed (jeadams.com): 140 °F, 1/4" MPT in x 1/8" NPSF
+out, brass, **auto-recloses** on cooling, opens within 2–10 s of the
+threshold, $33.50, currently *unavailable* (alternates below). Plumbs into
+a 1/4" hole in the casting, exits the 1/8" hole at the valve end.
+
+Casey's point that the **1/2" recycle line with no back pressure keeps the
+pump out of the danger zone** is right with real margin: thermal minimum
+~1.3 GPM (10 °F rise) vs ~8 GPM through the 1/2" recycle = **~6x**. The
+thermal valve's ~2 GPM is ~1.5x. Two independent mechanisms, each
+sufficient alone — recycle is primary, the thermal valve covers the case
+where recycle is NOT open (electronics dead / valve stuck). Because the
+valve reseats with no trace, the DS18B20 below is what makes a firing
+observable.
+
 ### Parts
 
 - [ ] Thermal relief valve, 140 °F, 1/4" MPT in x 1/8" NPSF out, brass,
