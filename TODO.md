@@ -212,6 +212,26 @@ it earn the right to run Field A's automated zones un-manned.
 > | line X commanded | ~50 | **60** | line didn't open → open CVs → still 60 → **fault → stop pump (last step)** |
 > | line X commanded | ~50 | **35** | broken pipe / burst → alarm |
 >
+> **FAULT HANDLING — no pump stop, defensive maneuvers with the zone
+> valves (Casey, 2026-08-26).** Because recycle-open dead-head is SAFE,
+> faults are handled by switching zones, never by killing the pump:
+>
+> 1. **CV job = hold 55.** If the CVs open and still can't reach 55 →
+>    **alarm.** (Physics check: holding 55 = 73 GPM total, CVs supply ≤ ~33
+>    GPM, so heads must deliver ≥ ~40 GPM ≈ **8 heads**. 6-7 heads → CVs
+>    max out at ~56-57 → alarm by design. 12-head floor is well clear.)
+> 2. **60 psi with a line commanded → a valve didn't open → alarm.** No
+>    pump stop needed (DH is safe). Maneuver: **open a different line**,
+>    flag the current line in error.
+> 3. **Low pressure with a line commanded** — break unlikely; broken
+>    sprinkler maybe; **most likely the previous line didn't close (2 lines
+>    running).** Maneuver: switch to a different line → OK? current line
+>    is suspect. Still bad? switch to the previous line → OK? retry. Still
+>    a problem → **a valve is not closing** → alarm.
+>
+> Applies to the automated (solenoid) zones on the sprinkler node; the
+> manual aluminum lines can only be alarmed on, not maneuvered.
+>
 > This dissolves the 58-vs-60 ambiguity: 60 is fine when nothing SHOULD be
 > running and a fault when something should. The sprinkler node knows
 > what's commanded; pump-monitor knows pressure; HA joins them. (ICE at 58
