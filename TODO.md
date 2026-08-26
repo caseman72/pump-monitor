@@ -627,6 +627,23 @@ Findings:
 
 ### Pump zones (mornings)
 
+**2026-08-26 morning — all six lawn zones re-measured on a DIFFERENT base
+(14-head A-1 + B-3 set at 55.5 psi, ran all night):**
+
+| zone | time | psi | delta (base 55.5) | delta 08-24 (base 51.7) |
+|---|---|---:|---:|---:|
+| pump lawn 1 | 06:00-06:15 | 51.3 | −4.2 | −4.4 |
+| pump lawn 2 | 06:15-06:30 | 51.8 | −3.7 | −3.8 |
+| front lawn 1 | 07:28-07:52 | 51.6 | −3.9 | −4.1 |
+| front lawn 2 | 07:52-08:17 | 52.5 | −3.0 | −3.0 |
+| front lawn 3 | 08:17-08:37 | 53.7 | −1.8 | −1.7 |
+| front lawn 4 | 08:37-08:52 | 55.1 | −0.4 | −0.4 |
+
+**KEY: every delta repeats within 0.2 psi on a base 3.8 psi higher →
+lawn-zone deltas are ADDITIVE and independent of the running line.** The
+feedforward table is therefore `base(line) + offset(lawn zone)` with no
+cross-terms. (Recorder; front zones split with BAND=0.5.)
+
 | Pump zone | psi | Delta vs 51.7 baseline | Ran | Date |
 |---|---:|---:|---|---|
 | pump zone 1 | 47.3 | −4.4 | 05:50–06:05 (~15 min) | 2026-08-24, recorder; order confirmed by Casey |
