@@ -214,7 +214,44 @@ vacations etc. They also produce the before/after data for the C-E grant.
       ~56 ft makes it 89% — true head-to-head on the same holes.
     - 4 zones, fits the board's 4 spare relays; one zone at a time; ~3-hr
       sets ≈ 1.35" (4-hr ≈ 1.8"). F4PC (part-circle) heads on the perimeter.
-    - Radius measurement now optional — 71-89% of radius is ample margin.
+    - Radius measurement now optional — 71-107% of radius is ample margin
+      for pasture.
+
+    **Pipe layout & watering regime (Casey, 2026-08-25):**
+    - **Mainline already exists** — 3" (maybe 4"; will know when dug up),
+      runs **down the middle of Field A, 3 pipe on each side.** So every
+      zone is center-fed: two ~120 ft stubs of 3-4 heads off a tee.
+    - **1.5" laterals are enough** — center feed means 1.5" carries only
+      half the zone (~39 GPM on the first 40 ft ≈ 6 ft/s, then ~4.4 and
+      falling after each head); total lateral loss ≈ 2 psi. (End-fed 7
+      heads on 1.5" would be 12 ft/s — the center tee is what makes 1.5"
+      right.) 3" vs 4" main is irrelevant at these flows.
+    - **Watering today: 12-hr sets, 2×/week = 24 hr/week.** 18% humidity.
+      Impacts on the 40 × 60 cell = 0.19 in/hr → 2.3"/set ≈ **4.5"/week.**
+      **Field A pools** — can't take much water at once (C/D/E drain
+      better; those take 24-hr sets).
+    - **Falcons apply 2-2.4× faster → sets must shrink for the same
+      water:** #10 (0.38 in/hr) → **6 hr** ×2/week; #12 (0.45) → **5 hr**
+      ×2. Do NOT carry 12-hr sets over (12 hr of #12 = 5.4", it will pool).
+      Pooling argues for the LOWER rate (#10). Set the pump-controller
+      Field A default to ~6 hr and tune in HA.
+    - **PC heads for the lawn by the pond — two options:**
+
+      | | A: PC at the end of each line | B: 5th PC line at the pond + respace 40/50/40/50 |
+      |---|---|---|
+      | lines | 4 at 60 ft | 5 at ~30/70/120/160/210 |
+      | heads/zone | 7-8 | 6-7 |
+      | zones | **4 — fits the board** | **5 — needs a 5th relay** |
+      | between-line | 107% (pasture OK) | 89% head-to-head |
+      | zone GPM | #10: 66-76 · #12: 78-90 | #12: 67-78 |
+
+      A PC head at the same nozzle puts ~2× the water on its half-circle
+      — which is what the lawn wants vs the pasture (Casey: "2x the
+      water"). **Recommended: A with #10** — 4 zones stay on the board,
+      the extra head pushes #10 into the 60-100 window, and #10's gentler
+      rate suits a pooling pasture. B is better coverage but costs a 5th
+      relay a pasture doesn't need.
+
   - Casey likes 40 ft (Rick uses 30; the hand lines run 40 ft pipe at 50 ft
     between lines). **40 ft doesn't fit 4 zones with any nozzle** — 49
     heads → 5-7 zones, and it lays down 2.3-3.1"/4-hr set (heavy for
