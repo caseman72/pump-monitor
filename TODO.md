@@ -135,7 +135,7 @@ it earn the right to run Field A's automated zones un-manned.
 > when it matters → ICE must key on something other than a bare psi
 > number (recycle valve commanded open + heat), and the **thermal backstop
 > in section 6 + the IR-gun casing baseline are the real dead-head guard**.
-> - [ ] **DECISIVE TEST — scheduled 2026-08-26 (Casey proposed 2026-08-25): recycle valves 100%
+> - [x] ~~DECISIVE TEST~~ **MOOT (2026-08-26)** — the head-count sweep showed one CV alone drops 12 heads from 55.8 → 36 psi, both → 16. The CVs have overwhelming authority; see the sweep results. Original plan: recycle valves 100%
 >   open → close the 4" main valve SLOWLY → watch pump pressure.**
 >   Predictions: *Claude* — climbs past 55, settles ~60-61 (curve flat near
 >   shutoff). *Casey* — stops at ~55 (10% flow ≈ 6 psi). Either way it
@@ -286,9 +286,44 @@ Design notes:
       6 → ~60.0, 18 → ~52.8 psi.
       **IR step 0 (before): 67.5 °F at the casing drain plug** (14 heads,
       55.5 psi) — essentially pond temperature; casing runs cool.
-      **Results:** 7 heads (B-3 alone, 09:25) = **59.3** (pred 59.6 ✓);
-      13 heads (A-4 + B-3) = **55.7** (pred ~56.2 ✓; only +0.2 over the
-      14-head set — the curve is flat in this range, ~0.5 psi/head)
+      **RESULTS (2026-08-26, Field A/B lines):**
+
+      | heads | psi | pred | note |
+      |---:|---:|---:|---|
+      | 19 (A-4+A-3+B-3) | 50.4 | 52.0 | |
+      | 18 (A-2/3/4) | 49.8 | 52.8 | Field A 18 runs ~1.5 psi under the C/D/E 18-head lines (closer → less friction → more flow) |
+      | 13 (A-4+B-3) | 55.7 | 56.2 | |
+      | 12 (A-4+A-3) | 55.8 / 55.8 / 55.9 / 55.8 | 56.8 | repeatable ±0.1 |
+      | 11 | 56.6 / 56.8 / 56.9 / 56.7 | 57.5 | |
+      | 10 | 57.5 | 58.1 | |
+      | 7 (B-3 alone) | 59.3 | 59.6 | |
+      | 6 | 59.6 | 60.0 | |
+      | **5** | **59.7** | 60.4 | **5→6 heads = 0.1 psi — dead flat near shutoff** |
+
+      Fit is confirmed in shape, real curve runs ~0.5-1 psi below it at
+      mid-flow (and ~2-3 under at 18-19 heads, partly the Field A vs C/D/E
+      routing). Pressure cannot discriminate small zones — confirmed.
+      **IR after: 67.6 °F** (before 67.5) — minutes at 5-6 heads (~27-32
+      GPM) put ZERO heat into the casing. Thermal minimum is well below
+      that.
+
+      **RECYCLE VALVES — MAJOR FINDING.** At 12 heads (55.8 psi):
+      **CV1 open → 36 psi. CV1 + CV2 open → 16 psi.** One 1/2" valve
+      pulled ~20 psi off a running 12-head zone ≈ **~100 GPM through it**
+      (fit-extrapolated; ~50-100 either way), NOT the ~8 GPM assumed. So:
+      - Casey was RIGHT that the CVs can hold 55 psi on dead-head — one
+        valve barely cracked does it. Claude was right about the curve
+        shape, wrong about valve capacity (assumed 20-30 GPM wide open).
+      - **The close-the-main decisive test is MOOT — cancelled.**
+      - **⚠️ THE HAZARD IS NOW THE LOW SIDE.** Both valves open = 16 psi,
+        **below the Furnas 20 psi cutoff** → latching starter drops the
+        pump (the $500 manual-restart event), and >150 GPM below ~46 psi is
+        5 HP motor overload territory. **Full-open recycle is a FAULT
+        state.** The controller MUST cap recycle opening so pressure never
+        falls below ~46 psi (motor floor) — and never near 20 (Furnas).
+      - With all authority in the first ~25% of travel, proportional
+        control lives in pulse positions ~1-4. The recycle capacity test
+        (bucket timing) is no longer needed — this measurement supersedes.
       Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
       6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
       curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
