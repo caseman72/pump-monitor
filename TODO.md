@@ -339,7 +339,17 @@ Design notes:
       - Transducer is on the branch UPSTREAM of the CVs (Casey). Casey will
         install the move to the pump discharge himself (real-world things).
         **Agreed: moving the transducer is the next hardware job, before any
-        controller work.** Casey still favors a 55 psi trim target.
+        controller work.**
+      - **DECIDED 2026-08-26 (Casey): CVs hold ≤ 55 psi; ICE High Trip = 58
+        psi.** ≥ 58 means the CVs aren't doing their job (a 6-head zone at
+        59 SHOULD alert — with the controller working it would have been
+        trimmed to 55). Set on the device via the API (was 65, which the
+        pump could never reach). On record: recycle-only dead-head sits at
+        60, so ICE also alerts in that (safe) state — harmless while ICE is
+        alert-only; matters only if the relay is ever wired into the loop.
+      - Decisive-test thermal: **IR showed NO heat-up** during ~1 min of
+        recycle-only dead-head (pump at 60). Casey: "no need to keep it
+        latched" — 1 min was enough to see nothing moves.
       Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
       6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
       curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
