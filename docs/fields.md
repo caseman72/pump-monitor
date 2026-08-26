@@ -112,6 +112,62 @@ to this pump than the previous owner's 16-head standard (slightly low-flow
 of ideal). Head counts above ~21 would push past BEP toward the 5 HP motor
 limit.
 
+### Build plan (Casey, 2026-08-25)
+
+**Phase 1 — Field A (proof of concept), then repeat for Field B.** A & B
+are doable, and once done they water themselves — no help needed for
+vacations etc. They also produce the before/after data for the C-E grant.
+
+1. Buy a trencher + a hydraulic diverter valve for the tractor.
+2. Trench Field A.
+3. Buy pipe, conduit, fittings, valves, sprinklers, primer, glue, wire,
+   boxes.
+4. Install pipe, fittings, sprinklers, valves.
+5. Install conduit + wiring.
+6. Install valve boxes (access + protection).
+7. Remove the risers → plumb in the valves.
+8. Test zones 1-4 **by hand**.
+9. Repeat the test **with the controller** (`pump-controller.yaml`).
+10. Fill in, over-seed, fertilize.
+
+**Phase 2 — Fields C-E (~4x the area of A). Needs more planning.**
+- Each current cross-field line becomes 3 runs:
+  - **Field C:** valve → pipe → sprinklers.
+  - **Field D:** valve → pipe (no sprinklers) → pipe + sprinklers at the
+    end; conduit runs to a box at the watering area by the fence.
+  - **Field E:** mainline through C & D → **2 valves** → pipe + sprinklers;
+    conduit to a box by the gate.
+- Open design questions:
+  - Add an extra line along the fence with **180° (part-circle) heads** to
+    water the edge properly? (Recommended — see spacing notes below.)
+  - Current line spacing is uneven (~30 + 60 + 60 + 50 ft). Re-layout for
+    **even, optimal spacing** rather than reusing the old riser positions.
+
+### Head spacing & the Falcon flow question
+
+- **Fence line with 180° heads: yes.** Part-circle heads on the boundary
+  are standard practice — full-circle heads set back from the edge leave
+  the last ~half-radius under-watered, and pushing them to the fence
+  throws half their water off the property. A perimeter run of 180° heads
+  fixes both.
+- **Spacing rule:** heads should be spaced at **~50% of throw diameter
+  (= one radius, "head-to-head")**, and Central Oregon wind argues for
+  ≤50%, not more. Don't trust a 60 ft catalog throw at working pressure:
+  a Falcon's radius depends on nozzle and pressure, and our nozzles see
+  ~45 psi, not 50-60. Measure one head's real radius at real pressure,
+  then lay the grid at that radius — triangular pattern if the field shape
+  allows (better uniformity than square). **Re-layout is worth it**; the
+  old 30/60/60/50 spacing was set by riser convenience, not coverage.
+- **⚠️ Falcons flow MORE per head than the current 5/32" impacts.** The
+  whole pressure/zone model in TODO.md (heads → GPM → pump psi, the
+  12-head floor) is built on ~4.7 GPM/head. A Rain Bird Falcon 6504 runs
+  ~4 to 20+ GPM depending on nozzle. So zone sizing for the new fields is
+  **by GPM, not head count**: pick the Falcon nozzle and heads-per-zone so
+  each zone lands in the pump's good window (~60-100 GPM, near BEP). E.g.
+  8 Falcons on a ~9 GPM nozzle ≈ 72 GPM ≈ today's 14-15 impact heads.
+  Fewer, bigger heads per zone — re-run the zone table once the nozzle is
+  chosen.
+
 - Target **≤ 8 heads per line** so that **two lines can run at once**.
   Note: two 8-head lines = 16 heads ≈ 76 GPM, which is slightly BELOW the
   pump's BEP (~100 GPM ≈ 21 heads at ~4.7 GPM/head). If pipe/head capacity
