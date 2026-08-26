@@ -158,14 +158,38 @@ vacations etc. They also produce the before/after data for the C-E grant.
   then lay the grid at that radius — triangular pattern if the field shape
   allows (better uniformity than square). **Re-layout is worth it**; the
   old 30/60/60/50 spacing was set by riser convenience, not coverage.
-- **Nozzle pick: Rain Bird Falcon 6504 #12 (Beige) — 2026-08-25.** At our
-  ~45 psi nozzle pressure: #10 = 8.6, **#12 = 10.4**, #14 = 12.0, #16 = 13.5
-  GPM/head. With #12, **7-8 heads/zone = 72-83 GPM** — mid-window for the
-  pump (60-100 GPM), margin both ways (#14 runs 84-96, tight at the top;
-  #10 drops toward the 60 floor). ~50 ft radius → Field A (240 × 230) on a
-  50 ft head-to-head grid ≈ 5 × 5 = **~25 heads = 4 zones of 6-7**, nearly
-  the original 6/6/6/7 split. Precipitation ≈ 0.40 in/hr → a **4-hr set ≈
-  1.6"**, matching the planned 4-hr timers.
+- **Heads: Rain Bird Falcon 6504** — F4FC (full circle) interior, **F4PC
+  (part circle, +$6/head) on the perimeter/fence line** for edge coverage
+  without throwing water off the property. 20-24 PC heads ≈ $120-145 —
+  non-issue. (cheapsprinklers.com F4FC / F4PC.)
+- **Radius table (Falcon 6504):** at 50 psi #10 = 53 ft, #12 = 55, #14 = 59,
+  #16 = 61, #18 = 59; at 60 psi 55/57/61/63/63. Our nozzle pressure with a
+  7-9 head zone is ~52-54 psi → **#10 ≈ 54 ft, #12 ≈ 56 ft.**
+- **Spacing vs zones vs pump window — Field A 240 × 230 (2026-08-25):**
+
+  | spacing | nozzle | heads | zones | GPM/zone | in/hr | 4-hr set | % of radius | board |
+  |---:|---|---:|---:|---:|---:|---:|---|---|
+  | **50 ft** | **#10** | **36** | **4** | **86** | 0.37 | 1.5" | 92% | **fits (4 spare relays)** |
+  | 50 ft | #12 | 36 | 5 | 81 | 0.43 | 1.7" | 89% | needs 5th relay |
+  | 45 ft | #10 | 49 | 5 | 93 | 0.45 | 1.8" | 83% | needs 5th relay |
+  | 40 ft | #10 | 49 | 5 | 93 | 0.57 | 2.3" | 74% | needs 5th relay |
+  | 40 ft | #12 | 49 | 6 | 91 | 0.67 | 2.7" | 71% | needs 2 more |
+
+  - Casey likes 40 ft (Rick uses 30; the hand lines run 40 ft pipe at 50 ft
+    between lines). **40 ft doesn't fit 4 zones with any nozzle** — 49
+    heads → 5-7 zones, and it lays down 2.3-3.1"/4-hr set (heavy for
+    pasture; ~2-hr sets instead).
+  - **Revised nozzle pick: #10 (Gray), not #12** — the smaller nozzle keeps
+    more heads per zone inside the 60-100 GPM window (Casey's "smaller
+    nozzle" rule, applied to zone design). Radius is the same class.
+  - **Recommended: 50 ft + #10** — 4 zones, 86 GPM (≈ today's 14 impact
+    heads), 92% head-to-head, 36 heads, matches the 50 ft between-line
+    spacing Casey already walks. **Next step up for wind margin: 45 ft +
+    #10** — 49 heads and a 5th zone (PCF8574 + relay module, or move the
+    lawn zones off this board).
+  - **One zone at a time:** two zones = 170+ GPM, past the 5 HP limit.
+  - **Measure a real #10 head's radius** at running pressure before
+    committing the grid.
   - **Why "smaller nozzle = more throw" held on the old lines (Casey):**
     at equal pressure a bigger nozzle throws slightly farther (heavier
     stream), but on a pump-limited line smaller nozzles cut total flow →
