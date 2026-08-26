@@ -825,8 +825,9 @@ observable.
 - [ ] Status (2026-08-25): J.E. Adams 7685 **cannot be ordered — out of
       stock**. Casey has a **parts request in with J.E. Adams** to source
       it. **Timeline: ~1 year** — the thermal valve is the backstop for the
-      automated/un-manned phase, which waits on the Field A underground
-      work anyway, so it's not on the critical path. **Fallback: Cat 7140**
+      automated/un-manned phase, which waits on the **Fields A-E underground
+      conversion** (Field A first, then the rest) anyway, so it's not on the
+      critical path. **Fallback: Cat 7140**
       (1/4" MPT, 145 °F, drop-in equivalent, ~$40-45, ~2-week ship) if Adams
       doesn't come through in time.
 - ~~Candidate~~ **RULED OUT (Casey, 2026-08-25): Cat Pumps 7142** — brass, 145 °F,
