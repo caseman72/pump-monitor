@@ -113,7 +113,7 @@ it earn the right to run Field A's automated zones un-manned.
 > recycle-only pressure once that's measured; (c) accept 55 is only
 > holdable while irrigation is flowing (proportional trim), not on full
 > dead-head.
-> - [ ] **MEASURE the recycle valves' absolute capacity on the 4" main**
+> - [ ] **MEASURE the recycle valves' absolute capacity on the real supply** (they do NOT sit on the 4" irrigation main — where the recycle branch taps in and its pipe size are TBC with Casey)
 >   (timed fill at 100% open). The faucet bucket tests gave only relative
 >   %, never absolute GPM on the real supply. This one number decides the
 >   ICE setpoint and whether 55 is reachable on dead-head.
