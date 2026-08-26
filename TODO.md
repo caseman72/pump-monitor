@@ -69,6 +69,25 @@ it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
+> **SMALLEST ZONE IS 12 HEADS, NOT 6 (Casey, 2026-08-25).** Field A lines
+> 2-4 are 6 heads each, but a lone 6-head line is a waste for a 5 HP pump
+> (32 GPM at 60 psi — most of the work goes into unused pressure), so zones
+> are built as pairs: **12 = the floor.** This resolves every problem the
+> 6-head case created:
+>
+> | smallest zone | pump psi | margin to shutoff | recycle to hold 55 | ICE @ 60 |
+> |---:|---:|---:|---:|---|
+> | 6 | 60.0 | 1.2 psi | 58% | false alarms |
+> | **12** | **56.8** | **4.4 psi** | **18%** | **safe** |
+>
+> Operating envelope = 12-21 heads = ~56.8 → 50.3 psi, a ~6.5 psi range with
+> 55 psi comfortably mid-window. The "pressure is a weak discriminator /
+> ~1 psi band" concern was a 6-head artifact and no longer applies to
+> normal operation (it still argues for the passive thermal backstop in
+> section 6 as defense-in-depth). ICE at 60 trips ONLY on genuine control
+> failure, since every real zone runs ≤ 56.8. Remaining test: **10 heads
+> via 2×5** (safe, predicts ~58.1) and **12** (predicts ~56.8) — skip 6 and 5.
+
 > **Control target & ICE setpoint — Casey's plan, 2026-08-25.** Since the
 > system can never actually reach 60 psi in normal use (55.5 at 14 heads is
 > today's max), **control recycle to hold ~55 psi**, and set **ICE at 60**.
