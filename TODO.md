@@ -266,6 +266,8 @@ it earn the right to run Field A's automated zones un-manned.
 > min; ~11:53:30 line opened w/ CVs open → 52/48/47; **11:56 second DH →
 > 60.3** ~1 min; 11:57 line + **both CVs full open → 45**; 11:58 CVs
 > closed → **49.3** steady (18 heads A-2/3/4; was 49.8 at the old spot).
+> Both DH plateaus read **60.4-60.5** (cursor 60.4 at 11:56:26) — the
+> recycle-only DH value is reproducible to ±0.1 psi.
 > → **Both CVs wide open pull ~4 psi at 18 heads** (49.3 → 45) ≈ 17 GPM of
 > recycle at 45 psi, ≈ 29 GPM at DH. Recycle capacity = 10-30 GPM class,
 > now pinned at the pump.
