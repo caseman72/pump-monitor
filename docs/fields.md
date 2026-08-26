@@ -158,6 +158,18 @@ vacations etc. They also produce the before/after data for the C-E grant.
   then lay the grid at that radius — triangular pattern if the field shape
   allows (better uniformity than square). **Re-layout is worth it**; the
   old 30/60/60/50 spacing was set by riser convenience, not coverage.
+- **Nozzle pick: Rain Bird Falcon 6504 #12 (Beige) — 2026-08-25.** At our
+  ~45 psi nozzle pressure: #10 = 8.6, **#12 = 10.4**, #14 = 12.0, #16 = 13.5
+  GPM/head. With #12, **7-8 heads/zone = 72-83 GPM** — mid-window for the
+  pump (60-100 GPM), margin both ways (#14 runs 84-96, tight at the top;
+  #10 drops toward the 60 floor). ~50 ft radius → Field A (240 × 230) on a
+  50 ft head-to-head grid ≈ 5 × 5 = **~25 heads = 4 zones of 6-7**, nearly
+  the original 6/6/6/7 split. Precipitation ≈ 0.40 in/hr → a **4-hr set ≈
+  1.6"**, matching the planned 4-hr timers.
+  - **One zone at a time with Falcons:** two zones = 145-165 GPM, past the
+    5 HP limit (~150). "Two lines at once" was an impact-head idea.
+  - **Measure the real radius** of one #12 head at running pressure before
+    committing the grid (46 ft → ~30 heads, not 25).
 - **⚠️ Falcons flow MORE per head than the current 5/32" impacts.** The
   whole pressure/zone model in TODO.md (heads → GPM → pump psi, the
   12-head floor) is built on ~4.7 GPM/head. A Rain Bird Falcon 6504 runs
