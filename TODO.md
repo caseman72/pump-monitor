@@ -209,7 +209,8 @@ it earn the right to run Field A's automated zones un-manned.
 > |---|---:|---|---|
 > | no lines, recycle open | ~60 | 60 | normal — dead-head-SAFE, no alarm |
 > | line X + lawn Y | base(X)+offset(Y) ≈ 45-56 | matches | normal |
-> | line X commanded | ~50 | **60** | line didn't open → open CVs → still 60 → **fault → stop pump (last step)** |
+> | line X commanded | ~50 | **60** | line didn't open → open CVs → still 60 → **fault → maneuvers (try another line); NO pump stop** |
+> | CVs failed AND nothing open (true DH) | — | ~61 (pressure blind) | **thermal relief fires → discharge-copper TEMP ALARM → STOP PUMP immediately** — the ONLY kill trigger |
 > | line X commanded | ~50 | **35** | broken pipe / burst → alarm |
 >
 > **FAULT HANDLING — no pump stop, defensive maneuvers with the zone
@@ -228,6 +229,15 @@ it earn the right to run Field A's automated zones un-manned.
 >    running).** Maneuver: switch to a different line → OK? current line
 >    is suspect. Still bad? switch to the previous line → OK? retry. Still
 >    a problem → **a valve is not closing** → alarm.
+>
+> 4. **True dead-head (CVs failed AND no line open): pressure can't see
+>    it (61.2 vs 61.3). The thermal relief valve fires → hot water on the
+>    discharge copper → DS18B20 TEMP ALARM → STOP PUMP IMMEDIATELY.** This
+>    is the ONE and only pump-kill trigger (Casey, 2026-08-26). Pressure
+>    faults never kill; temperature does.
+>    → Consequences: the **temp sensor is REQUIRED** (only signal for the
+>    kill), and the ICE relay DOES get wired in the un-manned phase,
+>    driven by temperature only ("not this year" still stands).
 >
 > Applies to the automated (solenoid) zones on the sprinkler node; the
 > manual aluminum lines can only be alarmed on, not maneuvered.
@@ -997,8 +1007,8 @@ protection.
   the discharge copper is at the pump, not the enclosure — so a bare I2C
   temp sensor may be too far. Options: DS18B20 (1-wire, runs tens of feet)
   on a GPIO, or keep I2C via a **DS2482 I2C→1-wire bridge** on the board
-  with the DS18B20 out on a long lead. **Deferred — not adding to
-  pump-monitor.yaml yet** (Casey).
+  with the DS18B20 out on a long lead. **Deferred for now — but REQUIRED:
+  it is the only kill trigger in the fault design (2026-08-26).**
 - [ ] **DS18B20 clamped to the copper discharge line** (thermal paste +
       insulation wrap; surface-mount tracks the water within a few degrees,
       which is plenty for detecting a ~70 °F excursion). `one_wire:` bus +
