@@ -263,6 +263,7 @@ sprinkler:
           max_value: 180
           step: 1
           unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
           restore_value: true
         enable_switch:
           name: "Pump Lawn Zone 1 Enabled"
@@ -277,6 +278,7 @@ sprinkler:
           max_value: 180
           step: 1
           unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
           restore_value: true
         enable_switch:
           name: "Pump Lawn Zone 2 Enabled"
