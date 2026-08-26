@@ -196,11 +196,14 @@ vacations etc. They also produce the before/after data for the C-E grant.
     line, lines ~50 ft apart; Field A = 4 lines of 6/6/6/7 = 25 heads. On
     those exact positions with Falcon 6504, one zone per line:
 
-    | nozzle | 6-head zone | 7-head zone | in/hr | 3-hr | 4-hr | 40/50 ft vs radius |
+    | nozzle | 6-head zone | 7-head zone | in/hr | 3-hr | 4-hr | 40/60 ft vs radius |
     |---|---:|---:|---:|---:|---:|---|
-    | #10 | 57 GPM | 66 | 0.46 | 1.4" | 1.8" | 74% / 93% |
-    | **#12** | **67** | **78** | 0.54 | 1.6" | 2.2" | **71% / 89%** |
-    | #14 | 77 | 90 | 0.62 | 1.9" | 2.5" | 67% / 83% |
+    | #10 | 57 GPM | 66 | 0.38 | 1.1" | 1.5" | 74% / 111% |
+    | **#12** | **67** | **78** | **0.45** | **1.35"** | **1.8"** | **71% / 107%** |
+    | #14 | 77 | 90 | 0.52 | 1.6" | 2.1" | 67% / 100% |
+
+    (Corrected 2026-08-25 to the drawing's real 40 × 60 ft cell; an earlier
+    version used 40 × 50.)
 
     - **Nozzle = #12 (Beige)** again: with 6-7 heads/zone, #10 dips under
       the 60 GPM floor on the 6-head lines; #12 lands 67-78, mid-window.
@@ -210,7 +213,7 @@ vacations etc. They also produce the before/after data for the C-E grant.
       of the impacts' ~45 ft radius (a gap between lines). Falcon #12 at
       ~56 ft makes it 89% — true head-to-head on the same holes.
     - 4 zones, fits the board's 4 spare relays; one zone at a time; ~3-hr
-      sets for ~1.6". F4PC (part-circle) heads on the perimeter.
+      sets ≈ 1.35" (4-hr ≈ 1.8"). F4PC (part-circle) heads on the perimeter.
     - Radius measurement now optional — 71-89% of radius is ample margin.
   - Casey likes 40 ft (Rick uses 30; the hand lines run 40 ft pipe at 50 ft
     between lines). **40 ft doesn't fit 4 zones with any nozzle** — 49
