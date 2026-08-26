@@ -12,17 +12,24 @@ Order along the ~1000 ft 4"→3" mainline (confirmed 2026-08-25):
 **pump → Field A (closest) → Field B (middle) → Field C → Fields D/E
 (furthest, end of the line)**
 
-This matters for pressure readings: friction loss scales with how far down
-the mainline the running zone sits, so the **same head count reads
-differently depending on which field it's in**. Two effects compound when
-comparing tests:
-- fewer heads → less flow → pump pressure **up**
-- closer field → less mainline friction → pump pressure **down**
+Distance matters a LOT at the nozzle and only a little at the pump —
+worth keeping straight (worked 2026-08-25 with the measured pump curve +
+Hazen-Williams, 14 heads):
 
-Worst case for pump pressure (i.e. the highest pressure normal operation
-can produce) = **fewest heads at the furthest field** — a small zone out at
-D/E. Best case = a small zone at Field A. Keep this in mind before putting
-two measurements on the same curve.
+| 14 heads at… | Nozzle psi | GPM/head | Total | Pump gauge |
+|---|---:|---:|---:|---:|
+| 50 ft | 58.7 | 5.42 | 75.8 | 59.0 |
+| 1000 ft (real mainline) | 53.8 | 5.18 | 72.6 | 59.5 |
+| 1 mile | 38.7 | 4.40 | 61.6 | 60.9 |
+
+- **At the nozzle:** less pipe → much higher pressure → materially more
+  water (23% more per head at 50 ft vs a mile). Closer really is better.
+- **At the pump gauge:** the opposite direction but *small* — more flow
+  makes the pump slide down its own curve, worth <2 psi over a mile and
+  ~0.5 psi across this system's actual 1000 ft.
+
+So when comparing two tests, **head count dominates the pump reading**;
+field distance is a ~1 psi correction, not a confound.
 
 ## Fields C, D, E — the four current "lines"
 

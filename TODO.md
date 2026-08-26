@@ -135,19 +135,21 @@ Design notes:
       **14 heads (Field A-1 (7) + B-3 (7), the shortest lines) = 55.5 psi**
       at the pump (recorder, 20:02-20:59, very stable ±0.4). Predicted ~54,
       so the curve steepens a bit faster at low flow than linear.
-      ⚠️ Caveat, now explained (2026-08-25): field order from the pump is
-      **A (closest) → B (middle) → C → D/E (furthest)**. The 14-head test
-      used the two CLOSEST fields while lines 1-4 run the FURTHEST (C/D/E),
-      so two effects fought: fewer heads pushed pressure UP, shorter
-      mainline pushed it DOWN. Net +4 psi means the **pure flow effect of
-      18→14 heads is LARGER than 4 psi** — distance masked part of it, and
-      the curve is steeper at low flow than 55.5 alone suggests.
+      Note (2026-08-25): field order from the pump is **A (closest) → B →
+      C → D/E (furthest)**, and the 14-head test used the two CLOSEST
+      fields. Distance does push pump pressure slightly DOWN (more flow,
+      pump slides down its curve) while fewer heads push it UP — but
+      **the distance effect at the PUMP is small**: worked with the real
+      curve + Hazen-Williams, 14 heads at 50 ft vs 1 mile is only
+      59.0 vs 60.9 psi, and 50 ft vs the actual 1000 ft mainline is ~0.5
+      psi. So the 4 psi vs the 18-head lines is essentially all head-count;
+      an earlier note here overstated distance as "masking" it.
       **Implication:** a single 7-head zone likely lands ~58-62 psi,
       crowding the ~65 psi dead-head estimate — the recycle threshold has a
-      NARROW band to live in, and it's narrower than that estimate because
-      the worst case (highest normal pressure) is the **smallest zone at the
-      FURTHEST field** (D/E): fewest heads AND most friction both push
-      pressure up. A 7-head zone at D/E reads higher than one at Field A.
+      NARROW band to live in. The worst case (highest normal pressure) is
+      the **smallest zone at the FURTHEST field** (D/E) — but only by ~1 psi
+      over Field A, since distance moves the PUMP gauge very little (see
+      above). Head count is what sets it.
       Measure the smallest zone AT D/E plus true dead-head before setting
       the threshold. (This also tightens the ~3 psi window that section 6's
       thermal-relief reasoning is built on — supports that conclusion.)
