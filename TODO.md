@@ -135,6 +135,18 @@ it earn the right to run Field A's automated zones un-manned.
 > when it matters → ICE must key on something other than a bare psi
 > number (recycle valve commanded open + heat), and the **thermal backstop
 > in section 6 + the IR-gun casing baseline are the real dead-head guard**.
+> - [ ] **DECISIVE TEST (Casey proposed, 2026-08-25): recycle valves 100%
+>   open → close the 4" main valve SLOWLY → watch pump pressure.**
+>   Predictions: *Claude* — climbs past 55, settles ~60-61 (curve flat near
+>   shutoff). *Casey* — stops at ~55 (10% flow ≈ 6 psi). Either way it
+>   yields the **real recycle-only pressure**, which is the number ICE must
+>   be set against. BONUS: a slow close sweeps the pump from ~50 psi to
+>   shutoff in one pass — the recorder captures the whole low-flow end of
+>   the curve, replacing the 12/10/6-head tests.
+>   Procedure: IR the casing before / during the closed hold / after; hold
+>   fully closed only 1-2 min (don't soak); NEVER close the recycle (it's
+>   the flow path); close the main over 30-60 s (clean curve, no hammer);
+>   note the clock time for the recorder pull.
 > - [ ] **MEASURE the recycle valves' absolute capacity on the real supply** (they do NOT sit on the 4" irrigation main — where the recycle branch taps in and its pipe size are TBC with Casey)
 >   (timed fill at 100% open). The faucet bucket tests gave only relative
 >   %, never absolute GPM on the real supply. This one number decides the
