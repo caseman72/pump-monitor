@@ -1012,9 +1012,9 @@ protection.
   **Second job (Casey): ACTIVE freeze protection.** At the freeze
   threshold the controller **opens the CVs and runs recycle** (DH-with-
   recycle) — moving water doesn't freeze and the pump is a ~3 kW heater in
-  the loop. Threshold: Casey says "0 F ... not way below zero" — **0 °F vs
-  0 °C (32 °F) TBC**; 0 °F is a hard-freeze trigger that assumes the pump
-  house + 1/2" transducer branch survive a night in the 20s unmoving.
+  the loop. **Threshold: 35 °F (DECIDED 2026-08-26)** — recycle kicks in just
+  above freezing, before the volute or the 1/2" transducer branch is at
+  risk. (A misread "−35" vs "~35" caused a brief detour.)
   Window: a cold snap before the Oct 15 shutoff / winterization.
 - [ ] **DS18B20 clamped to the copper discharge line** (thermal paste +
       insulation wrap; surface-mount tracks the water within a few degrees,
