@@ -1009,10 +1009,13 @@ protection.
   on a GPIO, or keep I2C via a **DS2482 I2C→1-wire bridge** on the board
   with the DS18B20 out on a long lead. **Deferred for now — but REQUIRED:
   it is the only kill trigger in the fault design (2026-08-26).**
-  **Second job (Casey): freeze safety.** The same sensor gives a below-
-  freezing alarm — alert when the discharge copper drops toward ~35 °F
-  (a cold snap before the Oct 15 shutoff / winterization is the window it
-  catches), before the volute or the 1/2" transducer branch freezes.
+  **Second job (Casey): ACTIVE freeze protection.** At the freeze
+  threshold the controller **opens the CVs and runs recycle** (DH-with-
+  recycle) — moving water doesn't freeze and the pump is a ~3 kW heater in
+  the loop. Threshold: Casey says "0 F ... not way below zero" — **0 °F vs
+  0 °C (32 °F) TBC**; 0 °F is a hard-freeze trigger that assumes the pump
+  house + 1/2" transducer branch survive a night in the 20s unmoving.
+  Window: a cold snap before the Oct 15 shutoff / winterization.
 - [ ] **DS18B20 clamped to the copper discharge line** (thermal paste +
       insulation wrap; surface-mount tracks the water within a few degrees,
       which is plenty for detecting a ~70 °F excursion). `one_wire:` bus +
