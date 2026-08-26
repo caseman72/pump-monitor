@@ -69,9 +69,10 @@ are ~63 ft apart (3 across 190 ft). ⚠️ Earlier notes assumed ~50 ft
 between lines — corrected here. With a Falcon #12 (~56 ft radius), 60 ft
 is **107% of radius**: every point is still covered (max 36 ft from a head
 in a 40 × 60 cell) but neighbors don't reach each other across lines, so
-between-line uniformity is soft — OK for pasture. Head-to-head fixes:
-**#14** (60 ft radius → 100%; 6-7 heads = 77-90 GPM, in window) or a
-**5th line at 48 ft**.
+between-line uniformity is soft — **Field A is a pasture (Casey), so
+this is acceptable: DECIDED — keep the 4 existing lines at 60 ft with
+#12; no 5th line, no #14.** (Head-to-head alternatives, if ever wanted:
+#14 → 60 ft radius = 100%, 6-7 heads = 77-90 GPM; or a 5th line at 48 ft.)
 
 Satellite view (`images/field-A-satellite.png`, local): the four lines are
 visible as light stripes running east–west across the field, with the
