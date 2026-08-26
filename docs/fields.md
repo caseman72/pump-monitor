@@ -61,6 +61,18 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 Zones of **6, 6, 6, 7** heads; an optional **+2 per line** for the back
 yard. Separate from the C/D/E lines ("the other zones").
 
+**Geometry from the to-scale sketch (read 2026-08-25):** the 4 lines span
+the 240 ft width at **~60 ft apart** (30 + 60 + 60 + 60 + 30 — the
+"30/60/60/50-60" spacing Casey mentioned); heads run **40 ft along** each
+230 ft line (6-7 per line). "4 × 8" box = sketch scale note. Field B lines
+are ~63 ft apart (3 across 190 ft). ⚠️ Earlier notes assumed ~50 ft
+between lines — corrected here. With a Falcon #12 (~56 ft radius), 60 ft
+is **107% of radius**: every point is still covered (max 36 ft from a head
+in a 40 × 60 cell) but neighbors don't reach each other across lines, so
+between-line uniformity is soft — OK for pasture. Head-to-head fixes:
+**#14** (60 ft radius → 100%; 6-7 heads = 77-90 GPM, in window) or a
+**5th line at 48 ft**.
+
 Satellite view (`images/field-A-satellite.png`, local): the four lines are
 visible as light stripes running east–west across the field, with the
 **pond at the south edge, the pump house beside it** — so Field A is the
