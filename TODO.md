@@ -113,6 +113,28 @@ it earn the right to run Field A's automated zones un-manned.
 > recycle-only pressure once that's measured; (c) accept 55 is only
 > holdable while irrigation is flowing (proportional trim), not on full
 > dead-head.
+> **RESOLUTION (2026-08-25, after Casey's "10% flow = 6 psi").** The recycle
+> branch is 1/2" with two 1/2" valves, ~8 GPM (ish) — Casey. The
+> "10% flow → 6 psi" assumption is LINEAR; centrifugal curves are flat near
+> shutoff and steep at high flow. Casey's own data proves it: 99→72.6 GPM
+> (a 26% flow change) moved pressure only 5.2 psi — linear would predict
+> ~16. Near shutoff it's flatter still: **8 GPM ≈ 0.07 psi below shutoff**,
+> not 6. The 1/2" line cannot bring pressure to 55 on dead-head — and it
+> DOESN'T NEED TO.
+>
+> Two separate goals, now untangled:
+> 1. **Dead-head protection: 8 GPM through the 1/2" recycle keeps the pump
+>    cool.** TRUE and sufficient — this is the whole job of the recycle
+>    system. Pressure sits ~61 with the pump safe.
+> 2. **55 psi is a TRIM target while irrigation is flowing** (recycle
+>    proportionally shaves a few psi). NOT a dead-head target — don't chase
+>    it there.
+>
+> Consequence: on dead-head, pressure CANNOT tell recycle-working (61.2 @
+> 8 GPM) from recycle-failed (61.3 @ 0). ICE-by-pressure is blind exactly
+> when it matters → ICE must key on something other than a bare psi
+> number (recycle valve commanded open + heat), and the **thermal backstop
+> in section 6 + the IR-gun casing baseline are the real dead-head guard**.
 > - [ ] **MEASURE the recycle valves' absolute capacity on the real supply** (they do NOT sit on the 4" irrigation main — where the recycle branch taps in and its pipe size are TBC with Casey)
 >   (timed fill at 100% open). The faucet bucket tests gave only relative
 >   %, never absolute GPM on the real supply. This one number decides the
