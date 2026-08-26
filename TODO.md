@@ -88,6 +88,36 @@ it earn the right to run Field A's automated zones un-manned.
 > failure, since every real zone runs ≤ 56.8. Remaining test: **10 heads
 > via 2×5** (safe, predicts ~58.1) and **12** (predicts ~56.8) — skip 6 and 5.
 
+> **⚠️ 10% recycle ≠ 6 psi — flow vs pressure (2026-08-25).** Casey's
+> point that ~10% recycle flow protects the pump from dead-head is RIGHT
+> (heat is the damage mechanism; ~10 GPM carries it away). But 6 psi below
+> shutoff is 10% of PRESSURE, not flow — the curve is quadratic near
+> shutoff, so with irrigation closed:
+>
+> | recycle GPM | pump psi |
+> |---:|---:|
+> | 10 (10%) | 61.1 — still at shutoff |
+> | 30 | 60.2 |
+> | 50 | 58.3 |
+> | **73 (73%)** | **55.0** |
+>
+> Holding 55 psi with irrigation closed takes ~73 GPM of recycle — nearly
+> the pump's whole BEP flow. Two 1/2" ball valves very likely can't pass
+> that (realistic wide-open ~20-30 GPM → recycle-only pressure ~60-61).
+>
+> **DESIGN CONFLICT:** on a true all-closed event the recycle valves save
+> the pump but pressure settles ~60-61, so **ICE at 60 trips while recycle
+> is working correctly** — it can't tell "recycle saved it" from "recycle
+> failed." Options: (a) ICE keys on *recycle at 100% AND pressure still
+> rising* rather than a bare psi number; (b) raise ICE above the
+> recycle-only pressure once that's measured; (c) accept 55 is only
+> holdable while irrigation is flowing (proportional trim), not on full
+> dead-head.
+> - [ ] **MEASURE the recycle valves' absolute capacity on the 4" main**
+>   (timed fill at 100% open). The faucet bucket tests gave only relative
+>   %, never absolute GPM on the real supply. This one number decides the
+>   ICE setpoint and whether 55 is reachable on dead-head.
+
 > **Control target & ICE setpoint — Casey's plan, 2026-08-25.** Since the
 > system can never actually reach 60 psi in normal use (55.5 at 14 heads is
 > today's max), **control recycle to hold ~55 psi**, and set **ICE at 60**.
