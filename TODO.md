@@ -802,6 +802,15 @@ observable.
       2026-08-25) — screw-in install, no drilling/tapping cast iron.
 - [ ] Status: Casey is trying to buy the J.E. Adams unit; **nothing in hand
       yet** (2026-08-25). Alternates listed above if it stays unavailable.
+- Candidate found (2026-08-25): **Cat Pumps 7142** — brass, 145 °F,
+  125 psi max, **1/2" MPT in** × 1/8" FPT out, $37 (catpumpsandparts.com).
+  Thermally fine (145 vs 140 °F, 125 vs our ~61 psi, auto-reseats). ⚠️ The
+  1/2" MPT inlet does NOT match the casting's 1/4" port — needs a 1/4" MPT ×
+  1/2" FPT brass reducing adapter (extra joint, bigger valve on a small
+  port). The J.E. Adams and **Cat 7803** are 1/4" MPT and screw straight
+  in — prefer those if obtainable. The page's "25 GPM max flow" is the
+  bypass/pump flow it's rated for, not what passes the 1/8" outlet (~2 GPM
+  at 60 psi) — irrelevant either way, we need ~1.3 GPM.
 - [ ] Discharge: **copper pipe** to carry the hot water away from the pump
       AND the controls, probably discharging into the dirt (Casey).
 - [ ] Route the copper under the pump house. NOTE: it discharges **hot
