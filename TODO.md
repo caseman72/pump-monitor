@@ -135,14 +135,22 @@ Design notes:
       **14 heads (Field A-1 (7) + B-3 (7), the shortest lines) = 55.5 psi**
       at the pump (recorder, 20:02-20:59, very stable ±0.4). Predicted ~54,
       so the curve steepens a bit faster at low flow than linear.
-      ⚠️ Caveat: A-1/B-3 run a DIFFERENT plumbing path than lines 1-4
-      (Field A/B zones vs the C/D/E cross-field lines), so some of the 4 psi
-      vs. 18-head lines may be routing, not pure flow — don't put it blindly
-      on the lines' system curve.
-      **Implication:** a single 7-head zone (smallest, and the future Field
-      A zone size) likely lands ~58-62 psi, crowding the ~65 psi dead-head
-      estimate — the recycle threshold has a NARROW band to live in. Measure
-      a 7-head zone and true dead-head before setting it.
+      ⚠️ Caveat, now explained (2026-08-25): field order from the pump is
+      **A (closest) → B (middle) → C → D/E (furthest)**. The 14-head test
+      used the two CLOSEST fields while lines 1-4 run the FURTHEST (C/D/E),
+      so two effects fought: fewer heads pushed pressure UP, shorter
+      mainline pushed it DOWN. Net +4 psi means the **pure flow effect of
+      18→14 heads is LARGER than 4 psi** — distance masked part of it, and
+      the curve is steeper at low flow than 55.5 alone suggests.
+      **Implication:** a single 7-head zone likely lands ~58-62 psi,
+      crowding the ~65 psi dead-head estimate — the recycle threshold has a
+      NARROW band to live in, and it's narrower than that estimate because
+      the worst case (highest normal pressure) is the **smallest zone at the
+      FURTHEST field** (D/E): fewest heads AND most friction both push
+      pressure up. A 7-head zone at D/E reads higher than one at Field A.
+      Measure the smallest zone AT D/E plus true dead-head before setting
+      the threshold. (This also tightens the ~3 psi window that section 6's
+      thermal-relief reasoning is built on — supports that conclusion.)
       **BONUS — transducer zero confirmed:** the recorder caught a pump-off
       window (19:57-19:59) reading **0.1 psi** (0.0-0.2). Exactly what the
       corrected 1-ft suction geometry predicts (~0.4, within noise) and

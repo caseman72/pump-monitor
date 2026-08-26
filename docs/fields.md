@@ -5,6 +5,25 @@ Maps — accurate for distance; some lines will move for better spacing when
 the underground system goes in). Head counts per line/zone as sketched — **to be verified by physically
 counting each line** (should be close).
 
+## Mainline topology — distance from the pump
+
+Order along the ~1000 ft 4"→3" mainline (confirmed 2026-08-25):
+
+**pump → Field A (closest) → Field B (middle) → Field C → Fields D/E
+(furthest, end of the line)**
+
+This matters for pressure readings: friction loss scales with how far down
+the mainline the running zone sits, so the **same head count reads
+differently depending on which field it's in**. Two effects compound when
+comparing tests:
+- fewer heads → less flow → pump pressure **up**
+- closer field → less mainline friction → pump pressure **down**
+
+Worst case for pump pressure (i.e. the highest pressure normal operation
+can produce) = **fewest heads at the furthest field** — a small zone out at
+D/E. Best case = a small zone at Field A. Keep this in mind before putting
+two measurements on the same curve.
+
 ## Fields C, D, E — the four current "lines"
 
 C, D and E are irrigated together as **four lines** that each run across all
