@@ -286,6 +286,7 @@ Design notes:
       6 → ~60.0, 18 → ~52.8 psi.
       **IR step 0 (before): 67.5 °F at the casing drain plug** (14 heads,
       55.5 psi) — essentially pond temperature; casing runs cool.
+      **Results:** 7 heads (B-3 alone, 09:25) = **59.3** (pred 59.6 ✓)
       Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
       6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
       curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
