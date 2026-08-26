@@ -290,40 +290,41 @@ sensor:
   # come from the globals kept by the 500ms interval above (wall-clock since
   # the cycle started, against a planned total that Next re-plans). Idle reads
   # 0, not NAN, so HA gauges/templates never have to guard against "unknown".
+  # Internal accounting is seconds; reported in minutes to match the durations.
   - platform: template
     name: "Pump Lawn Zone Remaining"
-    unit_of_measurement: s
-    accuracy_decimals: 0
+    unit_of_measurement: min
+    accuracy_decimals: 1
     icon: "mdi:timer-sand"
     update_interval: 1s
     lambda: |-
       auto t = id(lawn_controller).time_remaining_active_valve();
       if (!t.has_value()) return 0.0f;
-      return (float) t.value();
+      return t.value() / 60.0f;
   - platform: template
     name: "Pump Lawn Zone Elapsed"
-    unit_of_measurement: s
-    accuracy_decimals: 0
+    unit_of_measurement: min
+    accuracy_decimals: 1
     icon: "mdi:timer-outline"
     update_interval: 1s
     lambda: |-
-      return (float) id(lawn_zone_elapsed);
+      return id(lawn_zone_elapsed) / 60.0f;
   - platform: template
     name: "Pump Lawn Total Remaining"
-    unit_of_measurement: s
-    accuracy_decimals: 0
+    unit_of_measurement: min
+    accuracy_decimals: 1
     icon: "mdi:timer-sand-complete"
     update_interval: 1s
     lambda: |-
-      return (float) id(lawn_total_remaining);
+      return id(lawn_total_remaining) / 60.0f;
   - platform: template
     name: "Pump Lawn Total Elapsed"
-    unit_of_measurement: s
-    accuracy_decimals: 0
+    unit_of_measurement: min
+    accuracy_decimals: 1
     icon: "mdi:timer-check-outline"
     update_interval: 1s
     lambda: |-
-      return (float) id(lawn_total_elapsed);
+      return id(lawn_total_elapsed) / 60.0f;
 
   - platform: wifi_signal
     name: "WiFi RSSI"
