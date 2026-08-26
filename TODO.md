@@ -131,7 +131,25 @@ Design notes:
   open just enough to bleed excess pressure and closing as load returns —
   smoother and less wasteful than open/shut. The "threshold" is the setpoint
   the loop holds under, not a trip.
-- [ ] **Low-flow pressure tests — Casey to run 2026-08-25 (tomorrow).**
+- [~] **Low-flow pressure tests — STARTED 2026-08-25.** First point in:
+      **14 heads (Field A-1 (7) + B-3 (7), the shortest lines) = 55.5 psi**
+      at the pump (recorder, 20:02-20:59, very stable ±0.4). Predicted ~54,
+      so the curve steepens a bit faster at low flow than linear.
+      ⚠️ Caveat: A-1/B-3 run a DIFFERENT plumbing path than lines 1-4
+      (Field A/B zones vs the C/D/E cross-field lines), so some of the 4 psi
+      vs. 18-head lines may be routing, not pure flow — don't put it blindly
+      on the lines' system curve.
+      **Implication:** a single 7-head zone (smallest, and the future Field
+      A zone size) likely lands ~58-62 psi, crowding the ~65 psi dead-head
+      estimate — the recycle threshold has a NARROW band to live in. Measure
+      a 7-head zone and true dead-head before setting it.
+      **BONUS — transducer zero confirmed:** the recorder caught a pump-off
+      window (19:57-19:59) reading **0.1 psi** (0.0-0.2). Exactly what the
+      corrected 1-ft suction geometry predicts (~0.4, within noise) and
+      proof there's no large offset. Together with the Boshart gauge
+      agreement at 50 psi, the transducer is confirmed at both ends.
+      Still to run: 12 (6+6), the 6-head smallest line, and a brief 13.
+- [ ] ~~Low-flow pressure tests — Casey to run 2026-08-25 (tomorrow).~~
   Run reduced-head sets and read the steady pump pressure to extend the
   pressure-vs-heads curve (currently only 18 = 51.7, 21 = 50.3 psi — too
   clustered to extrapolate to the small zones). Targets: **14 heads** (7+7),
