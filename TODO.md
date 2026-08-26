@@ -135,7 +135,18 @@ it earn the right to run Field A's automated zones un-manned.
 > when it matters → ICE must key on something other than a bare psi
 > number (recycle valve commanded open + heat), and the **thermal backstop
 > in section 6 + the IR-gun casing baseline are the real dead-head guard**.
-> - [~] **DECISIVE TEST — RUN 2026-08-26 but INCONCLUSIVE:** Casey ran it; the pump GAUGE read ~60 psi while the transducer (on the 1/2" recycle branch — see retraction in the sweep results) read low. Which gauge (accurate Boshart vs the ~5-8-high dial) and the exact step are TBC. Re-run after the transducer moves to the pump discharge. Original plan: recycle valves 100%
+> - [x] **DECISIVE TEST — RUN 2026-08-26, RESOLVED: CVs 100% open + 4"
+>   main closed → pump = 60 psi** on the accurate Boshart (the old dial has
+>   been removed; only the new gauge exists). Prediction: Claude 60-61 ✓,
+>   Casey 55 ✗ — the curve is flat near shutoff, recycle flow can't pull
+>   the pump to 55. **Design conclusion unchanged and good: pump at ~60
+>   with recycle flowing is the safe dead-head state; 55 is the trim target
+>   while irrigating.** Implied recycle capacity, both valves wide open ≈
+>   **33 GPM** (pump at 60 on the fitted curve) — ~25× the ~1.3 GPM thermal
+>   minimum, no low-side hazard. The transducer (on the branch, UPSTREAM of
+>   the CVs) read 16 → **44 psi of branch friction** at that flow — the
+>   reason it must move; later, that drop is a usable recycle-flow signal.
+>   Original plan: recycle valves 100%
 >   open → close the 4" main valve SLOWLY → watch pump pressure.**
 >   Predictions: *Claude* — climbs past 55, settles ~60-61 (curve flat near
 >   shutoff). *Casey* — stops at ~55 (10% flow ≈ 6 psi). Either way it
@@ -325,8 +336,10 @@ Design notes:
       - The 55.8 → 36 drop IS a flow signal for the branch (friction ∝
         Q^1.85) — a possible recycle flow meter later, once the branch
         length/geometry is known.
-      - Casey still favors a 55 psi control target — deferred until the
-        transducer is moved and reads the pump.
+      - Transducer is on the branch UPSTREAM of the CVs (Casey). Casey will
+        install the move to the pump discharge himself (real-world things).
+        **Agreed: moving the transducer is the next hardware job, before any
+        controller work.** Casey still favors a 55 psi trim target.
       Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
       6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
       curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
