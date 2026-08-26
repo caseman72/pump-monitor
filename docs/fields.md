@@ -1,6 +1,6 @@
 # Irrigation field layout
 
-Source: Casey's hand sketch (`images/irrigation fields.pdf`, local only; dimensions from Google
+Source: Casey's to-scale engineering drawing (`images/irrigation fields.pdf`, local only; dimensions from Google
 Maps — accurate for distance; some lines will move for better spacing when
 the underground system goes in). Head counts per line/zone as sketched — **to be verified by physically
 counting each line** (should be close).
@@ -61,10 +61,10 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 Zones of **6, 6, 6, 7** heads; an optional **+2 per line** for the back
 yard. Separate from the C/D/E lines ("the other zones").
 
-**Geometry from the to-scale sketch (read 2026-08-25):** the 4 lines span
+**Geometry from the to-scale engineering drawing (read 2026-08-25):** the 4 lines span
 the 240 ft width at **~60 ft apart** (30 + 60 + 60 + 60 + 30 — the
 "30/60/60/50-60" spacing Casey mentioned); heads run **40 ft along** each
-230 ft line (6-7 per line). "4 × 8" box = sketch scale note. Field B lines
+230 ft line (6-7 per line). "4 × 8" box = drawing scale note. Field B lines
 are ~63 ft apart (3 across 190 ft). ⚠️ Earlier notes assumed ~50 ft
 between lines — corrected here. With a Falcon #12 (~56 ft radius), 60 ft
 is **107% of radius**: every point is still covered (max 36 ft from a head
