@@ -798,6 +798,12 @@ observable.
       restrict — the 0.125" valve orifice stays the limiting element).
 - [ ] Mount on the **discharge port at the pump** so it sees casing water.
       Out on the mainline it would sit in stagnant water and never heat.
+      ✅ The casting has a **factory-tapped, plugged 1/4" port** (Casey,
+      2026-08-25) — screw-in install, no drilling/tapping cast iron.
+- [ ] Status: Casey is trying to buy the J.E. Adams unit; **nothing in hand
+      yet** (2026-08-25). Alternates listed above if it stays unavailable.
+- [ ] Discharge: **copper pipe** to carry the hot water away from the pump
+      AND the controls, probably discharging into the dirt (Casey).
 - [ ] Route the copper under the pump house. NOTE: it discharges **hot
       water, not steam** — 140 °F at 60 psi stays liquid (needs 212 °F to
       flash) — but it's a jet at line pressure, so aim it deliberately.
@@ -812,6 +818,14 @@ The valve fires only when everything else has already failed, and it can
 open, do its job, and reseat with no trace. Evidence matters as much as
 protection.
 
+- Sensor choice (2026-08-25): Casey prefers **I2C over raw GPIO** (the
+  C6 Canaduino GPIO is not opto-isolated; the board uses a smaller I2C
+  plug, which he thinks he has). ⚠️ I2C is short-range (a few feet) and
+  the discharge copper is at the pump, not the enclosure — so a bare I2C
+  temp sensor may be too far. Options: DS18B20 (1-wire, runs tens of feet)
+  on a GPIO, or keep I2C via a **DS2482 I2C→1-wire bridge** on the board
+  with the DS18B20 out on a long lead. **Deferred — not adding to
+  pump-monitor.yaml yet** (Casey).
 - [ ] **DS18B20 clamped to the copper discharge line** (thermal paste +
       insulation wrap; surface-mount tracks the water within a few degrees,
       which is plenty for detecting a ~70 °F excursion). `one_wire:` bus +
