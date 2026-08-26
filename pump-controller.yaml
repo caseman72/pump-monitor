@@ -29,8 +29,8 @@
 # pinout as pump-monitor.
 #
 # Upload:  ./upload.sh <this-board-ip> pump-controller.yaml
-# (upload.sh injects secrets from secrets.h; pass the board's own IP since
-#  DEVICE_IP in secrets.h defaults to the pump-monitor board.)
+# Always pass this board's IP: upload.sh's default (DEVICE_IP in secrets.h)
+# is the pump-monitor board, and it injects secrets from secrets.h.
 
 substitutions:
   # Lawn zone-transition gap. An auto-advance transition costs ONE gap, so a
@@ -38,6 +38,8 @@ substitutions:
   # DOUBLE gap - the component's interrupt path sets the timer to
   # "switching_delay_.value() * 2" (sprinkler.cpp) - so the Next re-plan below
   # adds 2 x lawn_open_delay, measured at 10 s from 1 fps screen captures.
+  # INTEGER SECONDS, not a time value: it is spliced raw into C++ lambdas as
+  # well as used as "${lawn_open_delay}s" in YAML. "5s" here breaks the build.
   lawn_open_delay: "5"
   wifi_ssid: "PLACEHOLDER"
   wifi_password: "PLACEHOLDER"
@@ -199,18 +201,18 @@ interval:
               id(lawn_cycle_start) = millis();
               id(lawn_total_elapsed) = 0;
               id(lawn_zone_elapsed) = 0;
-              uint32_t n = id(lawn_controller).number_of_valves();
+              size_t n = id(lawn_controller).number_of_valves();
               uint32_t sum = 0;
-              for (uint32_t i = 0; i < n; i++)
+              for (size_t i = 0; i < n; i++)
                 sum += id(lawn_controller).valve_run_duration_adjusted(i);
               id(lawn_planned_total) = n > 1 ? sum + ${lawn_open_delay} * (n - 1) : sum;
             }
             if (!running && id(lawn_prev_running)) {   // cycle ended: freeze elapsed
               id(lawn_total_remaining) = 0;
               id(lawn_zone_elapsed) = 0;
-              // Re-arm auto-advance, but ONLY if we were the ones who cleared
-              // it (Next, or start_single_valve() which clears it internally).
-              // A deliberate manual toggle is left alone.
+              // Re-arm auto-advance, but ONLY if a Run Zone button cleared it
+              // (start_single_valve() calls set_auto_advance(false)). A
+              // deliberate manual toggle is left alone.
               if (id(lawn_aa_restore)) {
                 id(lawn_aa_restore) = false;
                 id(lawn_auto_advance).turn_on();
@@ -284,13 +286,10 @@ sprinkler:
 
 sensor:
   # --- Pump Lawn timers ---------------------------------------------------
-  # All four come straight from the sprinkler component's own accounting, so
-  # they stay correct when Next is pressed (the skipped zone drops out of
-  # "incomplete" and the totals fall immediately). Idle reads 0, not NAN, so
-  # HA gauges/templates never have to guard against "unknown".
-  # The totals already include the inter-zone gap: total_cycle_time_*() adds
-  # switching_delay x (n-1) for valve_open_delay, and SUBTRACTS it for
-  # valve_overlap.
+  # Zone Remaining reads the sprinkler component directly. The other three
+  # come from the globals kept by the 500ms interval above (wall-clock since
+  # the cycle started, against a planned total that Next re-plans). Idle reads
+  # 0, not NAN, so HA gauges/templates never have to guard against "unknown".
   - platform: template
     name: "Pump Lawn Zone Remaining"
     unit_of_measurement: s
@@ -326,15 +325,6 @@ sensor:
     lambda: |-
       return (float) id(lawn_total_elapsed);
 
-  # --- Field A timers ---------------------------------------------------
-  # All four come straight from the sprinkler component's own accounting, so
-  # they stay correct when Next is pressed (the skipped zone drops out of
-  # "incomplete" and the totals fall immediately). Idle reads 0, not NAN, so
-  # HA gauges/templates never have to guard against "unknown".
-  # The totals already include the inter-zone gap: total_cycle_time_*() adds
-  # switching_delay x (n-1) for valve_open_delay, and SUBTRACTS it for
-  # valve_overlap.
-
   - platform: wifi_signal
     name: "WiFi RSSI"
     update_interval: 60s
@@ -364,13 +354,9 @@ button:
   # check zone 1, press Next, check zone 2, ... Next wraps around past the
   # last zone, so end the walk by turning the main switch off (shutdown).
   #
-  # Next turns auto-advance OFF first. The component does NOT mark an
-  # interrupted valve complete ("Valve cycle interrupted - NOT flagging valve
-  # as complete", sprinkler.cpp), so with auto-advance still on the cycle
-  # sweeps the skipped zone back up at the end - press Next during zone 1 and
-  # you get 2 then 1 again. Dropping auto-advance makes Next mean "skip it,
-  # for good". Self-cleaning: starting a cycle from the main switch calls
-  # prep_full_cycle_(), which sets auto-advance back to true.
+  # Next DISABLES the zone it leaves (see the second lambda) so the cycle
+  # never sweeps it back up; the interval re-enables every zone when the
+  # cycle ends.
   - platform: template
     name: "Pump Lawn Next Zone"
     icon: "mdi:skip-next"
@@ -378,11 +364,18 @@ button:
       - lambda: |-
           // Re-plan: the rest of the current zone is abandoned, so the cycle now
           // ends after one gap + the next zone. Computed BEFORE next_valve() so
-          // active_valve() still reports the zone being skipped.
+          // active_valve() still reports the zone being skipped. The next zone
+          // is the first ENABLED one after it (next_prev_ignore_disabled), so
+          // walk past anything an earlier Next already disabled.
           auto v = id(lawn_controller).active_valve();
           if (v.has_value()) {
-            uint32_t n = id(lawn_controller).number_of_valves();
-            uint32_t nxt = (v.value() + 1) % n;
+            size_t n = id(lawn_controller).number_of_valves();
+            size_t nxt = v.value();
+            for (size_t k = 1; k < n; k++) {
+              size_t c = (v.value() + k) % n;
+              auto *en = id(lawn_controller).enable_switch(c);
+              if (en == nullptr || en->state) { nxt = c; break; }
+            }
             id(lawn_planned_total) = id(lawn_total_elapsed) + 2 * ${lawn_open_delay}
                                     + id(lawn_controller).valve_run_duration_adjusted(nxt);
           }
