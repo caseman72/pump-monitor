@@ -22,3 +22,10 @@ secrets.h
 
 # Local sketches, satellite photos, field imagery (not backed up to GitHub)
 images/
+
+# Python bytecode from the local ESPHome component
+__pycache__/
+
+# Bench-test screen captures (HA recordings + ffmpeg stills)
+*.mov
+movie-stills/

@@ -1,16 +1,27 @@
-# Pump Controller - sprinkler node - ESP32-C6-DevKitC in a Canaduino ESP32
-# PLC-100 V1 (a SECOND board, separate from pump-monitor which runs the
-# recycle valves + ICE). This board runs standard 24 VAC solenoid zones via
-# the ESPHome native sprinkler component.
+# Pump Controller - ESP32-C6-DevKitC in a Canaduino ESP32 PLC-100 V1 (a
+# SECOND board, separate from pump-monitor which runs the recycle valves +
+# ICE). Standard 24 VAC solenoids on the board's relays.
 #
-# Two controllers on the one board (docs/sprinkler-component-notes.md):
-#   Pump Lawn controller  - the 2 pump-house lawn zones, REL1/REL2.
-#     valve_open_delay > 0: current zone turns OFF, gap, next turns ON.
-#     (These are the dead-head stress-test zones per the roadmap - open,
-#      close, open, close, off - so a clean gap between them is what we want.)
-#   Field-A controller - 4 zones, REL3-REL6. NOT WIRED YET (lots of digging
-#     to do). valve_overlap > 0: next line opens BEFORE the current closes,
-#     so a line is never completely off (no dead-head at transitions).
+# TWO DIFFERENT JOBS on one board:
+#
+#   Pump Lawn - a real sprinkler CONTROLLER (2 zones, REL1/REL2). Fixed
+#     order, fixed durations, scheduled: exactly what the ESPHome
+#     sprinkler: component is for. valve_open_delay > 0 means the current
+#     zone turns OFF, gap, next turns ON (the dead-head stress-test zones
+#     per roadmap section 0 - open, close, open, close, off).
+#
+#   Field A lines - PLAIN ON/OFF RELAYS (REL3-REL6), no controller.
+#     DESIGN ONLY, NOT WIRED (lots of digging to do). The irrigation side
+#     is not a schedule, it is an optimisation: a "brain" will coordinate
+#     ~17 lines across 5 boxes (A4/B3/C4/D4/E2) into dynamic sets chosen at
+#     runtime from flow and pressure - e.g. run A-4 + D-3 together, then
+#     four hours later A-3 + D-4, opening the new line, waiting ~15 s,
+#     checking pressure, then closing the old one. A sprinkler: controller
+#     cannot express that: its membership is fixed at compile time and it
+#     runs ONE valve at a time. So the lines stay dumb, the brain decides,
+#     and dead-head protection stays where it belongs - pressure-driven
+#     recycle on pump-monitor, backed by ICE-high and (TODO section 6) a
+#     passive thermal relief valve.
 #
 # Solenoids are standard 24 VAC (plain GPIO relays, no H-bridge). No display.
 #
@@ -22,26 +33,12 @@
 #  DEVICE_IP in secrets.h defaults to the pump-monitor board.)
 
 substitutions:
-  # Zone-transition timing. An auto-advance transition costs one gap
-  # (lawn_open_delay), so a full lawn cycle is 15 + 5 + 15 = 35 s. Pressing Next
-  # costs a DOUBLE gap -- the component's interrupt path sets the timer to
-  # "switching_delay_.value() * 2" (sprinkler.cpp) -- so the Next re-plan below
-  # adds 2 x lawn_open_delay, measured at 10 s in the frame captures.
+  # Lawn zone-transition gap. An auto-advance transition costs ONE gap, so a
+  # full lawn cycle is (zone + zone + lawn_open_delay). Pressing Next costs a
+  # DOUBLE gap - the component's interrupt path sets the timer to
+  # "switching_delay_.value() * 2" (sprinkler.cpp) - so the Next re-plan below
+  # adds 2 x lawn_open_delay, measured at 10 s from 1 fps screen captures.
   lawn_open_delay: "5"
-  field_a_overlap: "15"
-  #
-  # OVERLAP CONSTRAINT - run_duration MUST be > 2 x valve_overlap.
-  # The component keeps a pool of exactly TWO valve operators
-  # (sprinkler.h: "std::vector<SprinklerValveOperator> valve_op_{2}") and
-  # start_valve_() returns SILENTLY when both are busy - no log, no warning,
-  # the zone just never opens while the FSM marches on. With overlap, valve N
-  # and N+1 are both open during a handover, so valve N+2 needs valve N's
-  # operator back; that only holds if run_duration > 2 x overlap.
-  # Measured 2026-08-25: 30 s / 15 s (30 > 30 false) silently dropped zone 3;
-  # 60 s / 15 s ran all four, 45 s apart (= run_duration - overlap).
-  # Not a production risk - with unit_of_measurement "min" the smallest
-  # settable duration is 60 s vs a 15 s overlap - but it bites hard at the
-  # seconds timescale used for bench testing.
   wifi_ssid: "PLACEHOLDER"
   wifi_password: "PLACEHOLDER"
   ap_password: "PLACEHOLDER"
@@ -82,7 +79,9 @@ wifi:
   ssid: ${wifi_ssid}
   password: ${wifi_password}
   power_save_mode: NONE
-  reboot_timeout: 15min
+  # Never self-reboot on a network blip. A reboot mid-irrigation drops every
+  # line this board holds open; with 3-4 hour runs that silently aborts a set.
+  reboot_timeout: 0s
   ap:
     ssid: "Pump-Controller"
     password: ${ap_password}
@@ -92,6 +91,7 @@ captive_portal:
 api:
   encryption:
     key: ${api_key}
+  reboot_timeout: 0s   # same reason as wifi: HA restarting must not reboot us
 
 ota:
   platform: esphome
@@ -99,6 +99,12 @@ ota:
 
 logger:
   level: INFO
+
+external_components:
+  - source:
+      type: local
+      path: components   # pca9554 override: preserves relay outputs across
+                         # reboot/OTA instead of driving them all low at init
 
 i2c:   # REQUIRED - this is the bus the PCA9557 relay expander lives
   sda: 6   # on (every zone relay is driven through it). NOT a temp-sensor
@@ -125,23 +131,23 @@ switch:
     pin: {pca9554: relay_expander, number: 2, mode: OUTPUT}
   - platform: gpio
     id: rel_fielda1
-    internal: true
-    restore_mode: ALWAYS_OFF
+    name: "Field A Line 1"
+    restore_mode: RESTORE_DEFAULT_OFF   # resume after a reboot, do not slam shut
     pin: {pca9554: relay_expander, number: 3, mode: OUTPUT}
   - platform: gpio
     id: rel_fielda2
-    internal: true
-    restore_mode: ALWAYS_OFF
+    name: "Field A Line 2"
+    restore_mode: RESTORE_DEFAULT_OFF   # resume after a reboot, do not slam shut
     pin: {pca9554: relay_expander, number: 4, mode: OUTPUT}
   - platform: gpio
     id: rel_fielda3
-    internal: true
-    restore_mode: ALWAYS_OFF
+    name: "Field A Line 3"
+    restore_mode: RESTORE_DEFAULT_OFF   # resume after a reboot, do not slam shut
     pin: {pca9554: relay_expander, number: 5, mode: OUTPUT}
   - platform: gpio
     id: rel_fielda4
-    internal: true
-    restore_mode: ALWAYS_OFF
+    name: "Field A Line 4"
+    restore_mode: RESTORE_DEFAULT_OFF   # resume after a reboot, do not slam shut
     pin: {pca9554: relay_expander, number: 6, mode: OUTPUT}
 
 time:
@@ -179,24 +185,9 @@ globals:
   - id: lawn_planned_total
     type: uint32_t
     initial_value: "0"
-  - id: field_a_prev_running
+  - id: lawn_aa_restore
     type: bool
     initial_value: "false"
-  - id: field_a_cycle_start
-    type: uint32_t
-    initial_value: "0"
-  - id: field_a_total_elapsed
-    type: uint32_t
-    initial_value: "0"
-  - id: field_a_zone_elapsed
-    type: uint32_t
-    initial_value: "0"
-  - id: field_a_total_remaining
-    type: uint32_t
-    initial_value: "0"
-  - id: field_a_planned_total
-    type: uint32_t
-    initial_value: "0"
 
 interval:
   - interval: 500ms
@@ -217,6 +208,18 @@ interval:
             if (!running && id(lawn_prev_running)) {   // cycle ended: freeze elapsed
               id(lawn_total_remaining) = 0;
               id(lawn_zone_elapsed) = 0;
+              // Re-arm auto-advance, but ONLY if we were the ones who cleared
+              // it (Next, or start_single_valve() which clears it internally).
+              // A deliberate manual toggle is left alone.
+              if (id(lawn_aa_restore)) {
+                id(lawn_aa_restore) = false;
+                id(lawn_auto_advance).turn_on();
+              }
+              // put back any zone a Next press disabled
+              for (size_t i = 0; i < id(lawn_controller).number_of_valves(); i++) {
+                auto *en = id(lawn_controller).enable_switch(i);
+                if (en != nullptr && !en->state) en->turn_on();
+              }
             }
             id(lawn_prev_running) = running;
             if (running) {
@@ -236,40 +239,6 @@ interval:
               id(lawn_total_remaining) = plan > el ? plan - el : 0;
             }
           }
-          {
-            bool running = id(field_a_main).state;
-            if (running && !id(field_a_prev_running)) {   // rising edge = new cycle
-              id(field_a_cycle_start) = millis();
-              id(field_a_total_elapsed) = 0;
-              id(field_a_zone_elapsed) = 0;
-              uint32_t n = id(field_a_controller).number_of_valves();
-              uint32_t sum = 0;
-              for (uint32_t i = 0; i < n; i++)
-                sum += id(field_a_controller).valve_run_duration_adjusted(i);
-              id(field_a_planned_total) = n > 1 ? sum - ${field_a_overlap} * (n - 1) : sum;
-            }
-            if (!running && id(field_a_prev_running)) {   // cycle ended: freeze elapsed
-              id(field_a_total_remaining) = 0;
-              id(field_a_zone_elapsed) = 0;
-            }
-            id(field_a_prev_running) = running;
-            if (running) {
-              id(field_a_total_elapsed) = (millis() - id(field_a_cycle_start)) / 1000;
-              // Gate on a LIVE timer, not on active_valve(): the FSM designates
-              // the next valve at the START of the inter-zone gap, seconds
-              // before the switch opens. Holding the last value through the
-              // gap keeps zone elapsed + remaining == run duration.
-              auto v = id(field_a_controller).active_valve();
-              auto t = id(field_a_controller).time_remaining_active_valve();
-              if (v.has_value() && t.has_value() && t.value() > 0) {
-                uint32_t dur = id(field_a_controller).valve_run_duration_adjusted(v.value());
-                id(field_a_zone_elapsed) = dur > t.value() ? dur - t.value() : 0;
-              }
-              uint32_t plan = id(field_a_planned_total);
-              uint32_t el = id(field_a_total_elapsed);
-              id(field_a_total_remaining) = plan > el ? plan - el : 0;
-            }
-          }
 
 sprinkler:
   # --- Pump-house lawn: gap between zones (off, then on) ---
@@ -280,7 +249,9 @@ sprinkler:
     auto_advance_switch:
       name: "Pump Lawn Auto Advance"
       id: lawn_auto_advance
+      device_class: switch   # HA draws a state-aware toggle; a fixed icon cannot change with state
     valve_open_delay: ${lawn_open_delay}s
+    next_prev_ignore_disabled: true   # once skipped, Next won't come back to it
     valves:
       - valve_switch: "Pump Lawn Zone 1"
         run_duration_number:
@@ -289,8 +260,12 @@ sprinkler:
           min_value: 1
           max_value: 180
           step: 1
-          unit_of_measurement: s
+          unit_of_measurement: min
           restore_value: true
+        enable_switch:
+          name: "Pump Lawn Zone 1 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
         valve_switch_id: rel_lawn1
       - valve_switch: "Pump Lawn Zone 2"
         run_duration_number:
@@ -299,60 +274,13 @@ sprinkler:
           min_value: 1
           max_value: 180
           step: 1
-          unit_of_measurement: s
+          unit_of_measurement: min
           restore_value: true
+        enable_switch:
+          name: "Pump Lawn Zone 2 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
         valve_switch_id: rel_lawn2
-
-  # --- Field A: overlap so a line is never fully off (NOT wired yet) ---
-  - id: field_a_controller
-    main_switch:
-      name: "Field A"
-      id: field_a_main
-    auto_advance_switch:
-      name: "Field A Auto Advance"
-      id: field_a_auto_advance
-    valve_overlap: ${field_a_overlap}s
-    valves:
-      - valve_switch: "Field A Zone 1"
-        run_duration_number:
-          name: "Field A Zone 1 Duration"
-          initial_value: 60
-          min_value: 1
-          max_value: 360
-          step: 1
-          unit_of_measurement: s
-          restore_value: true
-        valve_switch_id: rel_fielda1
-      - valve_switch: "Field A Zone 2"
-        run_duration_number:
-          name: "Field A Zone 2 Duration"
-          initial_value: 60
-          min_value: 1
-          max_value: 360
-          step: 1
-          unit_of_measurement: s
-          restore_value: true
-        valve_switch_id: rel_fielda2
-      - valve_switch: "Field A Zone 3"
-        run_duration_number:
-          name: "Field A Zone 3 Duration"
-          initial_value: 60
-          min_value: 1
-          max_value: 360
-          step: 1
-          unit_of_measurement: s
-          restore_value: true
-        valve_switch_id: rel_fielda3
-      - valve_switch: "Field A Zone 4"
-        run_duration_number:
-          name: "Field A Zone 4 Duration"
-          initial_value: 60
-          min_value: 1
-          max_value: 360
-          step: 1
-          unit_of_measurement: s
-          restore_value: true
-        valve_switch_id: rel_fielda4
 
 sensor:
   # --- Pump Lawn timers ---------------------------------------------------
@@ -406,40 +334,6 @@ sensor:
   # The totals already include the inter-zone gap: total_cycle_time_*() adds
   # switching_delay x (n-1) for valve_open_delay, and SUBTRACTS it for
   # valve_overlap.
-  - platform: template
-    name: "Field A Zone Remaining"
-    unit_of_measurement: s
-    accuracy_decimals: 0
-    icon: "mdi:timer-sand"
-    update_interval: 1s
-    lambda: |-
-      auto t = id(field_a_controller).time_remaining_active_valve();
-      if (!t.has_value()) return 0.0f;
-      return (float) t.value();
-  - platform: template
-    name: "Field A Zone Elapsed"
-    unit_of_measurement: s
-    accuracy_decimals: 0
-    icon: "mdi:timer-outline"
-    update_interval: 1s
-    lambda: |-
-      return (float) id(field_a_zone_elapsed);
-  - platform: template
-    name: "Field A Total Remaining"
-    unit_of_measurement: s
-    accuracy_decimals: 0
-    icon: "mdi:timer-sand-complete"
-    update_interval: 1s
-    lambda: |-
-      return (float) id(field_a_total_remaining);
-  - platform: template
-    name: "Field A Total Elapsed"
-    unit_of_measurement: s
-    accuracy_decimals: 0
-    icon: "mdi:timer-check-outline"
-    update_interval: 1s
-    lambda: |-
-      return (float) id(field_a_total_elapsed);
 
   - platform: wifi_signal
     name: "WiFi RSSI"
@@ -492,25 +386,56 @@ button:
             id(lawn_planned_total) = id(lawn_total_elapsed) + 2 * ${lawn_open_delay}
                                     + id(lawn_controller).valve_run_duration_adjusted(nxt);
           }
-      - switch.turn_off: lawn_auto_advance
+      - lambda: |-
+          // Disable the zone we're leaving. The component does NOT mark an
+          // interrupted valve complete, so auto-advance would otherwise sweep
+          // it back up at the end of the cycle (press Next in zone 1 -> got
+          // 2, then 1 again). next_valve_number_in_cycle_() calls
+          // next_valve_number_(include_disabled=false), so a DISABLED valve is
+          // never revisited - and unlike clearing auto_advance, the rest of
+          // the cycle still runs. All valves are re-enabled when the cycle
+          // ends (see the interval below).
+          auto v = id(lawn_controller).active_valve();
+          if (v.has_value()) {
+            auto *en = id(lawn_controller).enable_switch(v.value());
+            if (en != nullptr) en->turn_off();
+          }
       - sprinkler.next_valve: lawn_controller
+
+  # Run ONE zone, for checking heads without walking the whole cycle.
+  # start_single_valve() from idle interrupts nothing, so (unlike Next) there
+  # is no stop-everything-then-start transition. No-ops if a cycle is already
+  # running - taking over a running cycle is what Next is for.
+  # The button seeds the timer globals itself (and sets prev_running) so the
+  # interval's rising edge doesn't overwrite the plan with a full-cycle total:
+  # a single-zone run is just that zone's duration.
   - platform: template
-    name: "Field A Next Zone"
-    icon: "mdi:skip-next"
+    name: "Pump Lawn Run Zone 1"
+    icon: "mdi:play-circle-outline"
     on_press:
       - lambda: |-
-          // Re-plan: the rest of the current zone is abandoned, so the cycle now
-          // ends after one gap + the next zone. Computed BEFORE next_valve() so
-          // active_valve() still reports the zone being skipped.
-          auto v = id(field_a_controller).active_valve();
-          if (v.has_value()) {
-            uint32_t n = id(field_a_controller).number_of_valves();
-            uint32_t nxt = (v.value() + 1) % n;
-            id(field_a_planned_total) = id(field_a_total_elapsed) + -${field_a_overlap}
-                                    + id(field_a_controller).valve_run_duration_adjusted(nxt);
-          }
-      - switch.turn_off: field_a_auto_advance
-      - sprinkler.next_valve: field_a_controller
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(0);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 0);
+
+  - platform: template
+    name: "Pump Lawn Run Zone 2"
+    icon: "mdi:play-circle-outline"
+    on_press:
+      - lambda: |-
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(1);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 1);
 
   - platform: restart
     name: "Restart"
