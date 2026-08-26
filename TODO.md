@@ -158,7 +158,45 @@ Design notes:
       corrected 1-ft suction geometry predicts (~0.4, within noise) and
       proof there's no large offset. Together with the Boshart gauge
       agreement at 50 psi, the transducer is confirmed at both ends.
-      Still to run: 12 (6+6), the 6-head smallest line, and a brief 13.
+      Still to run: 12 (6+6) and the **6-head** line (Field A lines 3-4 are
+      6 heads each). **SKIP the 5-head test** (closing a head on a 6): the
+      curve fit says 6→5 gains only **0.37 psi** of signal — under 2x sensor
+      noise — for real risk. Casey's instinct ("gets dicey, potential
+      energy") was right.
+
+      ### Pump curve FITTED to the three measurements (2026-08-25)
+
+      Fit to (99,50.3) (88,51.4) (72.6,55.5) — flows derived from nozzle
+      pressure — gives **H = 61.3 − 0.001165·Q²**, matching all three within
+      0.8 psi:
+
+      | heads | est. pump psi | margin to shutoff |
+      |---:|---:|---:|
+      | 21 | 50.7 | 10.6 (measured 50.3) |
+      | 18 | 52.8 | 8.5 (measured 51.4) |
+      | 14 | 55.5 | 5.7 (measured 55.5) |
+      | 12 | 56.8 | 4.4 |
+      | 10 | 58.1 | 3.2 |
+      | 8 | 59.1 | 2.1 |
+      | 6 | 60.0 | **1.2** |
+      | 5 | 60.4 | 0.9 |
+
+      **⚠️ FITTED SHUTOFF ≈ 61.3 psi, NOT the ~65 psi the published Goulds
+      curve implied.** Consistent with the measured ~52-62% efficiency (real
+      curve sits below published). Caveat: all three points are 72-99 GPM,
+      so the low-flow end is a long extrapolation — the 6-head run will test
+      it directly (predict ~60.0 psi).
+
+      **Consequences:**
+      - [ ] **ICE High Trip (65 psi) is UNREACHABLE** — the pump can't make
+        65, so the alert can never fire. Same failure as the old 80 psi
+        setting, repeated. It's alert-only (relay not wired) so nothing is
+        unsafe, but it should be lowered (~59-60) or the approach rethought
+        once the 6-head run confirms shutoff.
+      - A 6-head zone runs ~1.2 psi below dead-head → **pressure cannot
+        discriminate "smallest zone normal" from "dead-headed"** at that
+        size. Directly supports section 6's thermal-relief conclusion, now
+        with fitted numbers rather than estimates.
 - [ ] ~~Low-flow pressure tests — Casey to run 2026-08-25 (tomorrow).~~
   Run reduced-head sets and read the steady pump pressure to extend the
   pressure-vs-heads curve (currently only 18 = 51.7, 21 = 50.3 psi — too
