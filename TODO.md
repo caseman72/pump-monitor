@@ -822,8 +822,13 @@ observable.
       Out on the mainline it would sit in stagnant water and never heat.
       ✅ The casting has a **factory-tapped, plugged 1/4" port** (Casey,
       2026-08-25) — screw-in install, no drilling/tapping cast iron.
-- [ ] Status: Casey is trying to buy the J.E. Adams unit; **nothing in hand
-      yet** (2026-08-25). Alternates listed above if it stays unavailable.
+- [ ] Status (2026-08-25): J.E. Adams 7685 **cannot be ordered — out of
+      stock**. Casey has a **parts request in with J.E. Adams** to source
+      it. **Timeline: ~1 year** — the thermal valve is the backstop for the
+      automated/un-manned phase, which waits on the Field A underground
+      work anyway, so it's not on the critical path. **Fallback: Cat 7140**
+      (1/4" MPT, 145 °F, drop-in equivalent, ~$40-45, ~2-week ship) if Adams
+      doesn't come through in time.
 - ~~Candidate~~ **RULED OUT (Casey, 2026-08-25): Cat Pumps 7142** — brass, 145 °F,
   125 psi max, **1/2" MPT in** × 1/8" FPT out, $37 (catpumpsandparts.com).
   Thermally fine (145 vs 140 °F, 125 vs our ~61 psi, auto-reseats). ⚠️ The
