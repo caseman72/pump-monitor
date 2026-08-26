@@ -274,7 +274,12 @@ it earn the right to run Field A's automated zones un-manned.
 > recycle-only DH value is reproducible to ±0.1 psi.
 > → **Both CVs wide open pull ~4 psi at 18 heads** (49.3 → 45) ≈ 17 GPM of
 > recycle at 45 psi, ≈ 29 GPM at DH. Recycle capacity = 10-30 GPM class,
-> now pinned at the pump.
+> now pinned at the pump. **Photo cross-check** (`images/recycle-discharge-
+> to-pond-DH.png`, local): two 1/2" jets into the pond during DH, ~5-6 ft
+> arc from ~1.5 ft → ~20 ft/s → **~12 GPM per line, ~25 GPM both** —
+> agrees with the curve's ~29. Three independent estimates now agree.
+> Thermal valve port photo: `images/thermal-valve-port-volute.png` — the
+> square-head 1/4" NPT plug on the volute under the nameplate.
 > **"False value" = 110 psi, one sample at 11:43:06 while the pump was OFF
 > during the sensor move** — the ADC full-scale clamp from an open
 > transducer lead. NOT pressure. Design note: **treat readings ≥ ~105 as
