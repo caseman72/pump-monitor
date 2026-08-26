@@ -135,7 +135,7 @@ it earn the right to run Field A's automated zones un-manned.
 > when it matters → ICE must key on something other than a bare psi
 > number (recycle valve commanded open + heat), and the **thermal backstop
 > in section 6 + the IR-gun casing baseline are the real dead-head guard**.
-> - [ ] **DECISIVE TEST (Casey proposed, 2026-08-25): recycle valves 100%
+> - [ ] **DECISIVE TEST — scheduled 2026-08-26 (Casey proposed 2026-08-25): recycle valves 100%
 >   open → close the 4" main valve SLOWLY → watch pump pressure.**
 >   Predictions: *Claude* — climbs past 55, settles ~60-61 (curve flat near
 >   shutoff). *Casey* — stops at ~55 (10% flow ≈ 6 psi). Either way it
@@ -146,7 +146,10 @@ it earn the right to run Field A's automated zones un-manned.
 >   Procedure: IR the casing before / during the closed hold / after; hold
 >   fully closed only 1-2 min (don't soak); NEVER close the recycle (it's
 >   the flow path); close the main over 30-60 s (clean curve, no hammer);
->   note the clock time for the recorder pull.
+>   note the clock time for the recorder pull. Setup confirmed: open both
+>   valves via the HA "open" button (drives to end-stop = true 100%); the
+>   4" main valve seals well enough to prime the pump (leak-by negligible
+>   vs the 6 psi the predictions differ by); IR = laser temp readings.
 > - [ ] **MEASURE the recycle valves' absolute capacity on the real supply** (they do NOT sit on the 4" irrigation main — where the recycle branch taps in and its pipe size are TBC with Casey)
 >   (timed fill at 100% open). The faucet bucket tests gave only relative
 >   %, never absolute GPM on the real supply. This one number decides the
