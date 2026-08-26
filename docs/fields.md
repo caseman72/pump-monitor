@@ -175,6 +175,30 @@ vacations etc. They also produce the before/after data for the C-E grant.
   | 40 ft | #10 | 49 | 5 | 93 | 0.57 | 2.3" | 74% | needs 5th relay |
   | 40 ft | #12 | 49 | 6 | 91 | 0.67 | 2.7" | 71% | needs 2 more |
 
+  - **SUPERSEDED by the next bullet** — the table above assumes a 40 ft
+    SQUARE grid (49 heads); Casey's real pattern is 40 ft along × ~50 ft
+    between lines, which is what the 116-head system runs today.
+  - **RECOMMENDATION (2026-08-25): reuse today's 25 Field A positions, no
+    re-grid.** Casey has 116 sprinklers system-wide at 40 ft along the
+    line, lines ~50 ft apart; Field A = 4 lines of 6/6/6/7 = 25 heads. On
+    those exact positions with Falcon 6504, one zone per line:
+
+    | nozzle | 6-head zone | 7-head zone | in/hr | 3-hr | 4-hr | 40/50 ft vs radius |
+    |---|---:|---:|---:|---:|---:|---|
+    | #10 | 57 GPM | 66 | 0.46 | 1.4" | 1.8" | 74% / 93% |
+    | **#12** | **67** | **78** | 0.54 | 1.6" | 2.2" | **71% / 89%** |
+    | #14 | 77 | 90 | 0.62 | 1.9" | 2.5" | 67% / 83% |
+
+    - **Nozzle = #12 (Beige)** again: with 6-7 heads/zone, #10 dips under
+      the 60 GPM floor on the 6-head lines; #12 lands 67-78, mid-window.
+      Rule: the nozzle is chosen LAST to put zone GPM in 60-100 for the
+      head count you have — it moves when the head count moves.
+    - **Coverage improves:** today the 50 ft between-line spacing is ~111%
+      of the impacts' ~45 ft radius (a gap between lines). Falcon #12 at
+      ~56 ft makes it 89% — true head-to-head on the same holes.
+    - 4 zones, fits the board's 4 spare relays; one zone at a time; ~3-hr
+      sets for ~1.6". F4PC (part-circle) heads on the perimeter.
+    - Radius measurement now optional — 71-89% of radius is ample margin.
   - Casey likes 40 ft (Rick uses 30; the hand lines run 40 ft pipe at 50 ft
     between lines). **40 ft doesn't fit 4 zones with any nozzle** — 49
     heads → 5-7 zones, and it lays down 2.3-3.1"/4-hr set (heavy for
