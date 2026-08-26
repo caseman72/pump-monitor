@@ -785,10 +785,24 @@ observable.
 
 ### Parts
 
-- [ ] Thermal relief valve, 140 °F, 1/4" MPT in x 1/8" NPSF out, brass,
-      Viton/Buna, SS spring. J.E. Adams listed it but shows *Product
-      Unavailable*; same device sells as a pressure-washer thermal relief —
-      Cat Pumps 7803, General Pump 100573, etc.
+- [ ] Thermal relief valve, ~140-145 °F, **1/4" MPT in** x 1/8" NPT(F)
+      bleed out, brass. J.E. Adams (140 °F) shows *Product Unavailable*.
+      **Verified Cat Pumps options (datasheet PN 993179 Rev D,
+      catpumps.com/sites/default/files/2020-02/7140_D.pdf, 2026-08-25) —
+      all 125 psi max, 1/8" NPT(F) bleed port, brass:**
+      | model | opens | inlet |
+      |---|---:|---|
+      | **Cat 7140** | **145 °F** | **1/4" NPT(M)** ← the pick (JE Adams equiv) |
+      | Cat 7146 | 130 °F | 1/4" NPT(M) — earlier trip, more seal margin |
+      | Cat 7143 | 165 °F | 1/4" NPT(M) — too hot for us |
+      | 7141/7142/7144/7145 | 145/145/165/165 | 3/8" / 1/2" — won't fit |
+      ~$40-45 retail, typically "ships in 2 weeks."
+      ⚠️ Earlier notes cited "Cat 7803" and "General Pump 100573" — those
+      part numbers don't exist; corrected here.
+      ⚠️ Datasheet: *"if used in a tank fed system the thermal valve will
+      not reseat after opening — must be installed with a pressurized pump
+      inlet."* Ours goes on the DISCHARGE port (~61 psi = pressurized) so
+      it should reseat, but VERIFY it closes again after the first firing.
 - [ ] Fitting chain to get from the valve to 1/4" copper (ordered):
       valve `1/8-27 NPSF` (female, **straight** thread — sealed by a tapered
       male, so 1/8" NPT male is the correct mate, with PTFE tape)
