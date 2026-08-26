@@ -69,6 +69,40 @@ it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
+> **Control target & ICE setpoint — Casey's plan, 2026-08-25.** Since the
+> system can never actually reach 60 psi in normal use (55.5 at 14 heads is
+> today's max), **control recycle to hold ~55 psi**, and set **ICE at 60**.
+> Quantified cost (pump then always runs 73.3 GPM):
+>
+> | zone | delivered | recycled | % |
+> |---:|---:|---:|---:|
+> | 14 | 69.5 | 3.8 | 5% |
+> | 12 | 60.4 | 12.9 | 18% |
+> | 10 | 51.0 | 22.3 | 31% |
+> | 8 | 41.2 | 32.1 | 44% |
+> | 7 | 36.2 | 37.1 | 51% |
+> | 6 | 31.1 | 42.2 | 58% |
+>
+> At 6-7 head zones **recycle exceeds delivery**. Water returns to the pond
+> so it isn't lost, but the energy is. NOTE: the pump does NOT need this for
+> steady-state protection — un-recycled, 6 heads runs **32.5 GPM at 60.0
+> psi**, above the ~25-30 GPM minimum continuous flow. So 55 psi is
+> **insurance for zone transitions** (recycle already open = guaranteed flow
+> path when a zone closes), not a necessity. A 57-58 psi target would cut
+> the recycle fraction substantially if trading margin back is acceptable.
+>
+> **ICE at 60 psi** sits above the 55 target and below the 61.3 fitted
+> shutoff, so it reads as *"the recycle control has failed"* — a useful
+> alarm. ⚠️ Dependency: 6-head zones naturally run at 60.0 psi, so ICE at 60
+> **false-alarms on any small zone run WITHOUT the recycle loop active**.
+> Only correct while the control loop is running.
+>
+> **Thermal burst valve + IR temp baseline** (Casey): measuring cast-iron
+> casing temp before/after the low-flow runs with a laser thermometer is the
+> direct measurement of the actual damage mechanism (heat, not pressure) —
+> it will show whether 32 GPM at 60 psi is genuinely benign. Pairs with the
+> thermal relief valve in section 6.
+
 > **Design principle — recycle is PROTECTION/RELIEF, not efficiency
 > (2026-08-24, Casey asked "open recycle at 14 heads?"): NO.** This pump's
 > input power rises with flow, so adding recycle to push flow back toward
