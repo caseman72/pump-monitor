@@ -166,6 +166,16 @@ vacations etc. They also produce the before/after data for the C-E grant.
   50 ft head-to-head grid ≈ 5 × 5 = **~25 heads = 4 zones of 6-7**, nearly
   the original 6/6/6/7 split. Precipitation ≈ 0.40 in/hr → a **4-hr set ≈
   1.6"**, matching the planned 4-hr timers.
+  - **Why "smaller nozzle = more throw" held on the old lines (Casey):**
+    at equal pressure a bigger nozzle throws slightly farther (heavier
+    stream), but on a pump-limited line smaller nozzles cut total flow →
+    higher pressure at every head → more distance; the pressure gain wins.
+    (Data: 21 heads @ 44 psi vs 14 heads @ ~54.) With Falcons the zone flow
+    is CHOSEN, so nozzle pressure is set by heads-per-zone: #12 × 7 ≈ 72 GPM
+    → pump ~57 → **~52 psi at the nozzle**, ~8 psi more than the impacts
+    get today. That's where the ~50 ft radius comes from, and it's why #12
+    beats #14 (84 GPM drops nozzle pressure to ~48 and gives the radius
+    back).
   - **One zone at a time with Falcons:** two zones = 145-165 GPM, past the
     5 HP limit (~150). "Two lines at once" was an impact-head idea.
   - **Measure the real radius** of one #12 head at running pressure before
