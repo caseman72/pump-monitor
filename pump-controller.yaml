@@ -398,6 +398,15 @@ button:
           }
       - sprinkler.next_valve: lawn_controller
 
+  # Run the full cycle from a button, for consistency with the Run Zone
+  # buttons. Same as turning the main switch on; the interval's rising edge
+  # seeds the timers. Turn the main switch off to stop.
+  - platform: template
+    name: "Pump Lawn Run All Zones"
+    icon: "mdi:play-circle"
+    on_press:
+      - sprinkler.start_full_cycle: lawn_controller
+
   # Run ONE zone, for checking heads without walking the whole cycle.
   # start_single_valve() from idle interrupts nothing, so (unlike Next) there
   # is no stop-everything-then-start transition. No-ops if a cycle is already
