@@ -200,6 +200,20 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
   relay); **Restart** — reboot the ESP; **ICE Reset** — clear a latched trip
 - WiFi RSSI, IP Address, WiFi Network, Uptime
 
+### Pressure control (PID) — branch `pid`, not yet flashed
+
+ESPHome's `climate: pid` drives the recycle valves through the pulse
+primitive to hold pump pressure *under* a setpoint: CV1 opens 0–100 % first,
+then CV2. Design, reachable-setpoint table and the tuning log are in
+[`PID-PLAN.md`](PID-PLAN.md).
+
+- **Pressure Setpoint** (psi, default 55) and **Pressure Control** (master
+  switch, default OFF — OFF parks both valves at pulse 1, water-zero)
+- **PID Autotune** / **PID Reset Integral** buttons; **PID Kp / Ki / Kd**
+  numbers to try gains live (setting one pushes all three)
+- **Recycle Output** (0–200 %, the combined command) and the loop
+  internals — PID Result / Error / P / I / D Term, Kp / Ki / Kd Active
+
 ## Building & uploading
 
 Secrets never live in the YAML — `upload.sh` parses `secrets.h` and injects
@@ -243,6 +257,7 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
 - `docs/fields.md` — irrigation field layout and head counts per line/zone
   (source sketches and satellite photos live in the local, gitignored `images/`)
 - `TODO.md` — open work and the staged pressure-response design
+- `PID-PLAN.md` — the PID recycle controller: design, tuning procedure, results log
 - `tools/ha_pressure.py` — pulls Pump Pressure history from the HA recorder (read-only over ssh) and prints sustained plateaus, for logging line/zone pressures
 
 ## License

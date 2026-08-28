@@ -81,6 +81,10 @@ esphome:
           id(v2_pulse_number).publish_state(id(v2_pulse));
           id(v2_pulse_count).publish_state(id(v2_pulse));
       - script.execute: ice_apply
+      # PID: the climate object restores its own last target/mode, but the
+      # HA-facing Pressure Setpoint / Pressure Control entities are the
+      # source of truth - push them in so the two never disagree.
+      - script.execute: pid_sync
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -396,6 +400,21 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     entity_category: config
 
+  # ---- PID pressure control (see PID-PLAN.md) ----
+  # Master enable. ON = pid mode COOL (pressure above setpoint opens the
+  # recycle valves); OFF = pid mode OFF -> output 0 -> valves to the floor
+  # (pulse 1, water-zero). Default OFF; remembered across reboots.
+  - platform: template
+    name: "Pressure Control"
+    id: pressure_control
+    icon: "mdi:gauge-low"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - script.execute: pid_sync
+    on_turn_off:
+      - script.execute: pid_sync
+
 select:
   - platform: template
     name: "Control Wiring Relay Select"
@@ -551,6 +570,27 @@ button:
           ESP_LOGW("ice", "Trip reset by user");
       - script.execute: ice_apply
 
+  # ---- PID pressure control ----
+  # Relay-method autotune: bangs the recycle output 0 <-> 100% and needs
+  # pressure to cross the setpoint BOTH ways, so pick a reachable SP
+  # first (PID-PLAN.md table). No cancel action exists - Restart aborts.
+  # noiseband 0.5 psi ~ the transducer's noise band.
+  - platform: template
+    name: "PID Autotune"
+    icon: "mdi:tune-vertical"
+    entity_category: config
+    on_press:
+      - climate.pid.autotune:
+          id: pid_pressure
+          noiseband: 0.5
+
+  - platform: template
+    name: "PID Reset Integral"
+    icon: "mdi:backup-restore"
+    entity_category: config
+    on_press:
+      - climate.pid.reset_integral_term: pid_pressure
+
   - platform: restart
     name: "Restart"
     icon: "mdi:restart"
@@ -664,6 +704,69 @@ number:
           id: v2_pulse_target
           value: !lambda 'return (int) x;'
       - script.execute: v2_pulse_go
+
+  # ---- PID pressure control ----
+  # The setpoint the loop holds UNDER. Changeable any time, like a
+  # mini-split; the pid climate's target follows this number.
+  - platform: template
+    name: "Pressure Setpoint"
+    id: pressure_setpoint
+    unit_of_measurement: "psi"
+    icon: "mdi:gauge"
+    min_value: 30
+    max_value: 70
+    step: 0.5
+    initial_value: 55
+    optimistic: true
+    restore_value: true
+    mode: box
+    set_action:
+      - script.execute: pid_sync
+
+  # Live gain overrides for tuning without a reflash. Setting ANY one of
+  # them pushes all three, so enter all three from the autotune result.
+  # They are poke tools, not state: after a reboot the loop runs on the
+  # control_parameters in this file, and these numbers just show the last
+  # values typed. Bake proven gains into control_parameters.
+  - platform: template
+    name: "PID Kp"
+    id: pid_kp
+    entity_category: config
+    min_value: 0
+    max_value: 10
+    step: 0.001
+    initial_value: 0
+    optimistic: true
+    restore_value: true
+    mode: box
+    set_action:
+      - script.execute: pid_apply_gains
+  - platform: template
+    name: "PID Ki"
+    id: pid_ki
+    entity_category: config
+    min_value: 0
+    max_value: 10
+    step: 0.0001
+    initial_value: 0
+    optimistic: true
+    restore_value: true
+    mode: box
+    set_action:
+      - script.execute: pid_apply_gains
+  - platform: template
+    name: "PID Kd"
+    id: pid_kd
+    entity_category: config
+    min_value: 0
+    max_value: 100
+    step: 0.001
+    initial_value: 0
+    optimistic: true
+    restore_value: true
+    mode: box
+    set_action:
+      - script.execute: pid_apply_gains
 
 script:
   # ---- Flow-mode positioning (valve entity) ----
@@ -858,6 +961,31 @@ script:
           tag: valve
           format: "Safety timeout - valve relays forced off"
 
+  # ---- PID pressure control ----
+  # Push the HA-facing setpoint + enable switch into the pid climate.
+  - id: pid_sync
+    mode: restart
+    then:
+      - lambda: |-
+          auto call = id(pid_pressure).make_call();
+          call.set_target_temperature(id(pressure_setpoint).state);
+          call.set_mode(id(pressure_control).state ? climate::CLIMATE_MODE_COOL : climate::CLIMATE_MODE_OFF);
+          call.perform();
+          ESP_LOGI("pid", "sync: setpoint %.1f psi, control %s", id(pressure_setpoint).state,
+                   id(pressure_control).state ? "ON" : "OFF");
+
+  - id: pid_apply_gains
+    mode: restart
+    then:
+      - climate.pid.set_control_parameters:
+          id: pid_pressure
+          kp: !lambda 'return id(pid_kp).state;'
+          ki: !lambda 'return id(pid_ki).state;'
+          kd: !lambda 'return id(pid_kd).state;'
+      - logger.log:
+          tag: pid
+          format: "gains applied from HA numbers"
+
 sensor:
   - platform: wifi_signal
     name: "WiFi RSSI"
@@ -977,6 +1105,66 @@ sensor:
     update_interval: never
     entity_category: diagnostic
 
+  # ---- PID pressure control ----
+  # Process variable for the pid climate: plain copy of Pump Pressure. The
+  # component only needs a number; it doesn't care that it isn't a temp.
+  - platform: copy
+    source_id: pump_pressure
+    id: pid_pv
+    internal: true
+
+  # Combined recycle command, 0..200 %: CV1's flow % plus CV2's.
+  - platform: template
+    name: "Recycle Output"
+    id: recycle_pct
+    unit_of_measurement: "%"
+    icon: "mdi:valve"
+    accuracy_decimals: 0
+    update_interval: never
+
+  # The component's own loop internals, chartable in HA. RESULT is the raw
+  # pid output (-1..0 here: negative = "cooling" = opening recycle).
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID Result"
+    type: RESULT
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID Error"
+    type: ERROR
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID P Term"
+    type: PROPORTIONAL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID I Term"
+    type: INTEGRAL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID D Term"
+    type: DERIVATIVE
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID Kp Active"
+    type: KP
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID Ki Active"
+    type: KI
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_pressure
+    name: "PID Kd Active"
+    type: KD
+    entity_category: diagnostic
+
 binary_sensor:
   # The pump control loop as the pump sees it: ON = closed (pump enabled),
   # OFF = open (tripped). True for either NO or NC wiring.
@@ -1034,6 +1222,78 @@ text_sensor:
       name: "WiFi Network"
       icon: "mdi:wifi-cog"
       entity_category: diagnostic
+
+# ---- PID pressure control (see PID-PLAN.md) ----
+# The pid climate writes 0..1 here; this maps it onto the valves:
+#   state -> combined recycle flow 0..200 % (CV1 fills 0-100 first, then
+#   CV2) -> per-valve flow % -> ball fraction (measured flow table) ->
+#   nearest pulse counter -> the queued pulse script (no re-home).
+# Floor is pulse 1 = water-zero; pulse 0 / flow 0 % are seat drives and are
+# never commanded by the loop. Identical repeat targets are skipped so a
+# steady output doesn't stack queued moves.
+output:
+  - platform: template
+    type: float
+    id: recycle_out
+    write_action:
+      - lambda: |-
+          float total = vm_clampf(state, 0.0f, 1.0f) * 200.0f;
+          auto want = [](float flow, float T) {
+            int p = vm_frac_to_pulse(vm_flow_to_frac(vm_clampf(flow, 0.0f, 100.0f)), T);
+            return p < 1 ? 1 : p;
+          };
+          int p1 = want(total,          id(v1_travel_time).state);
+          int p2 = want(total - 100.0f, id(v2_travel_time).state);
+          if (p1 != id(v1_pulse_target)) {
+            ESP_LOGI("pid", "output %.0f%% -> CV1 pulse %d", total, p1);
+            id(v1_pulse_target) = p1;
+            id(v1_pulse_go).execute();
+          }
+          if (p2 != id(v2_pulse_target)) {
+            ESP_LOGI("pid", "output %.0f%% -> CV2 pulse %d", total, p2);
+            id(v2_pulse_target) = p2;
+            id(v2_pulse_go).execute();
+          }
+          if (isnan(id(recycle_pct).state) || fabsf(id(recycle_pct).state - total) >= 0.5f)
+            id(recycle_pct).publish_state(total);
+
+# The loop engine. internal: HA converts climate temperatures C->F, so a
+# thermostat card would show "131 F" for 55 psi - control it through the
+# Pressure Setpoint / Pressure Control entities instead. cool_output only:
+# pressure ABOVE setpoint -> output -> valves open; below -> 0 -> floor.
+# Gains start at 0; PID Autotune fills them in (PID-PLAN.md), then bake
+# the proven values in here.
+climate:
+  - platform: pid
+    id: pid_pressure
+    name: "Recycle PID"
+    internal: true
+    sensor: pid_pv
+    default_target_temperature: 55
+    cool_output: recycle_out
+    visual:
+      min_temperature: 0
+      max_temperature: 100
+      temperature_step: 0.5
+    # Samples arrive every 2 s (Pump Pressure publish rate), so 5 = ~10 s
+    # of output averaging, 15 in the deadband = ~30 s.
+    control_parameters:
+      kp: 0.0
+      ki: 0.0
+      kd: 0.0
+      output_averaging_samples: 5
+      derivative_averaging_samples: 5
+    # Deadband in psi: sensor noise is +/-0.4, so +0.5 sits just outside
+    # it; the wider low side means "a bit under setpoint is fine, don't
+    # chase it" (the loop holds UNDER the setpoint). Inside the band P and
+    # D are off and I creeps at 5 %, so it can't hunt between pulse counts.
+    deadband_parameters:
+      threshold_high: 0.5
+      threshold_low: -1.0
+      kp_multiplier: 0.0
+      ki_multiplier: 0.05
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
 
 interval:
   # ICE evaluation, once a second. Plain comparator with hysteresis, like

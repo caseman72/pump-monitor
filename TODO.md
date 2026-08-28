@@ -69,6 +69,12 @@ it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
+> **PID controller — IN PROGRESS 2026-08-27, branch `pid`, see
+> `PID-PLAN.md`.** ESPHome `climate: pid` + autotune driving CV1 then CV2
+> through the pulse primitive; setpoint is an HA number (default 55).
+> Tuning runs on the 12/14-head lines first (SP must be reachable — 50 on
+> 7 heads is not, floor ~57). Not flashed yet.
+
 > **SMALLEST ZONE IS 12 HEADS, NOT 6 (Casey, 2026-08-25).** Field A lines
 > 2-4 are 6 heads each, but a lone 6-head line is a waste for a 5 HP pump
 > (32 GPM at 60 psi — most of the work goes into unused pressure), so zones
@@ -241,6 +247,18 @@ it earn the right to run Field A's automated zones un-manned.
 >
 > Applies to the automated (solenoid) zones on the sprinkler node; the
 > manual aluminum lines can only be alarmed on, not maneuvered.
+>
+> **First real break signature (2026-08-27 22:24:36):** one Rainbird
+> riser unscrewed itself on the running line → pressure stepped 53.3 →
+> 44.3 psi in ONE sample (−9 psi, then dead steady at 44.3 for 40+ min).
+> Nothing commanded on any node; both CVs seated; ICE silent (high side
+> only). A bare 3/4" riser at ~45 psi passes ~40 GPM ≈ 8 heads' worth —
+> matches the +38 GPM the curve implies. So the "broken pipe / burst" row
+> above has a threshold: **a step of ≥ 5 psi below the running plateau
+> within ~10 s with no commanded change** — 20× sensor noise, and a lawn
+> zone (−4.4 max, always commanded) can't trigger it. Step, not ramp;
+> stable afterward. The PID loop will NOT see this (pressure drops below
+> SP → recycle to floor) — the residual alarm is the only detector.
 >
 > This dissolves the 58-vs-60 ambiguity: 60 is fine when nothing SHOULD be
 > running and a fault when something should. The sprinkler node knows
