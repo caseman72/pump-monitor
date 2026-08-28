@@ -364,24 +364,29 @@ button:
     icon: "mdi:skip-next"
     on_press:
       - lambda: |-
+          auto v = id(lawn_controller).active_valve();
+          if (!v.has_value()) return;
+          size_t n = id(lawn_controller).number_of_valves();
+          // Next on the LAST zone ends the cycle: there is nowhere to go, and
+          // wrapping back to zone 1 (or silently doing nothing once earlier
+          // zones were disabled) is never what a walk-through wants.
+          if (v.value() == n - 1) {
+            id(lawn_controller).shutdown();
+            return;
+          }
           // Re-plan: the rest of the current zone is abandoned, so the cycle now
           // ends after one gap + the next zone. Computed BEFORE next_valve() so
           // active_valve() still reports the zone being skipped. The next zone
           // is the first ENABLED one after it (next_prev_ignore_disabled), so
           // walk past anything an earlier Next already disabled.
-          auto v = id(lawn_controller).active_valve();
-          if (v.has_value()) {
-            size_t n = id(lawn_controller).number_of_valves();
-            size_t nxt = v.value();
-            for (size_t k = 1; k < n; k++) {
-              size_t c = (v.value() + k) % n;
-              auto *en = id(lawn_controller).enable_switch(c);
-              if (en == nullptr || en->state) { nxt = c; break; }
-            }
-            id(lawn_planned_total) = id(lawn_total_elapsed) + 2 * ${lawn_open_delay}
-                                    + id(lawn_controller).valve_run_duration_adjusted(nxt);
+          size_t nxt = v.value();
+          for (size_t k = 1; k < n; k++) {
+            size_t c = (v.value() + k) % n;
+            auto *en = id(lawn_controller).enable_switch(c);
+            if (en == nullptr || en->state) { nxt = c; break; }
           }
-      - lambda: |-
+          id(lawn_planned_total) = id(lawn_total_elapsed) + 2 * ${lawn_open_delay}
+                                  + id(lawn_controller).valve_run_duration_adjusted(nxt);
           // Disable the zone we're leaving. The component does NOT mark an
           // interrupted valve complete, so auto-advance would otherwise sweep
           // it back up at the end of the cycle (press Next in zone 1 -> got
@@ -390,12 +395,9 @@ button:
           // never revisited - and unlike clearing auto_advance, the rest of
           // the cycle still runs. All valves are re-enabled when the cycle
           // ends (see the interval below).
-          auto v = id(lawn_controller).active_valve();
-          if (v.has_value()) {
-            auto *en = id(lawn_controller).enable_switch(v.value());
-            if (en != nullptr) en->turn_off();
-          }
-      - sprinkler.next_valve: lawn_controller
+          auto *en = id(lawn_controller).enable_switch(v.value());
+          if (en != nullptr) en->turn_off();
+          id(lawn_controller).next_valve();
 
   # Run the full cycle from a button, for consistency with the Run Zone
   # buttons. Same as turning the main switch on; the interval's rising edge
