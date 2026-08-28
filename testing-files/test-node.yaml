@@ -52,6 +52,7 @@ logger:
 i2c:
   sda: 6
   scl: 7
+  frequency: 50kHz   # slow: the bus leaves the board over a cable Defaults to 50kHz. Values are 10kHz, 50kHz, 100kHz, 200kHz, … 800kHz.
   scan: true
 
 pca9554:   # PCA9557 - same register map; address from schematic

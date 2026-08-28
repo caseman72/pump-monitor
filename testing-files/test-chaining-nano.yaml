@@ -1,0 +1,192 @@
+# Chaining test, Nano variant - Arduino Nano ESP32 in a Canaduino Nano
+# PLC-100 V2 (MEGA328 PLC-100) as the head, driving a C6-type ESP32 PLC-100
+# V1 with an EMPTY socket as the dumb board.
+#
+# Why this way round: the Nano PLC-100's relays hang straight off Nano pins
+# (MEGA328 PLC 100 SMD V1_SCH.pdf: Q1..Q6 = D2,D3,D4,D5,A2,A3 -> ULN2003),
+# there is no I2C expander, so a Nano PLC-100 can never be processor-less.
+# The ESP32 PLC-100 V1 puts its relays on a PCA9557 I2C expander, so it CAN
+# be. Plain AVR Nanos don't run ESPHome; the Nano ESP32 (ESP32-S3) does.
+#
+# HEAD  (Nano PLC-100 V2 + Nano ESP32):
+#   Relays Q1..Q6 -> Nano D2,D3,D4,D5,A2,A3 = S3 GPIO 5,6,7,8,3,4
+#   I2C: Nano A4 = SDA = GPIO11, A5 = SCL = GPIO12 (J13 header: SCL SDA 5V GND)
+#   The DS1307 RTC on this board is at 0x68 (same as the V1's DS3231).
+# DUMB  (ESP32 PLC-100 V1, no DevKitC):
+#   PCA9557 @ 0x1A, its factory default - the Nano board has no expander,
+#   so there is nothing to collide with and the "address" solder jumper
+#   stays OPEN (the jumper is only needed in test-chaining.yaml, where two
+#   V1 boards would both sit at 0x1A). Own 12-24V supply.
+#
+# DUMB-BOARD 3.3V (found + fixed 2026-08-27): the V1's internal 3.3V rail
+#   (PCA9557 VDD, the 3.3V LED) is fed by the DevKitC's 3V3 pin, NOT by the
+#   board. With the socket empty the LED is dim, the expander lives on
+#   leakage, and the rail folds once any 3 relays are on (PCA9557 resets,
+#   every write NACKs "I2C I/O error: 2"; recovery needs a dumb-board
+#   power cycle + Nano Restart). The Qwiic 3V3 pin is a SEPARATE output -
+#   feeding it does nothing. FIX: 5V->3.3V buck from the board's POWER OUT
+#   5V/GND into the DevKitC socket's 3V3 pin (meter it first). Verified:
+#   LED bright, all six dumb relays on together, zero I2C errors. A seated
+#   C6 DevKitC (not running i2c:) does the same job.
+#
+# WIRING  head J13 (I2C) -> dumb Qwiic/I2C header, 3 wires by LABEL:
+#   GND -> GND, SDA -> SDA, SCL -> SCL. Head 5V pin: leave unconnected.
+#   The two headers are MIRROR IMAGES - a straight pin-to-pin cable is wrong:
+#     Nano PLC J13:  SCL  SDA  5V   GND
+#     V1 Qwiic:      GND  3V3  SDA  SCL
+#   Pin-for-pin puts head SCL on dumb GND ("SCL held low", no devices found)
+#   and head 5V on the dumb board's SDA. Verified 2026-08-27: wired by label,
+#   scan found 0x1A + 0x68 and all six dumb relays click. Keep it short (< ~1 m).
+#   If the scan finds 0x68 but NOT 0x1A and every toggle logs
+#   "pca9554 write_register_(): I2C I/O error: 2", the PCA9557 on the dumb
+#   board has latched up (seen once after the miswire). Restarting the Nano
+#   does NOT clear it - power-cycle the DUMB board, then Restart the Nano.
+#
+# CAUTION - Nano ESP32 is a 3.3 V part on a carrier designed for a 5 V
+# Nano. Relay drive (ULN2003) and I2C are fine at 3.3 V. The DI and AI
+# stages, however, present up to 5 V to the Nano pins; they are deliberately
+# NOT configured here. Check the input dividers before ever enabling them.
+#
+# PASS: boot i2c scan finds 0x1A and 0x68. "Chase All Relays" clicks the six
+# head relays, then the six dumb-board relays.
+##
+# NOTE: the dumb board's RTC stays on the bus at 0x68 (powered from its
+# 3.3V rail, battery or not), colliding with the head's RTC. Harmless for
+# relays, but never use an I2C RTC as `time:` on a chained node - use
+# platform: homeassistant/sntp, or desolder the dumb board's RTC.
+# Upload: first flash needs the S3 ROM bootloader - hold B1, tap RST,
+# release B1, then ./upload.sh test-chaining-nano.yaml. OTA after that.
+substitutions:
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+
+esphome:
+  name: test-chaining-nano
+  friendly_name: Test Chaining Nano
+
+esp32:
+  board: arduino_nano_esp32
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+
+api:    # unencrypted - bench rig only
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: DEBUG   # boot log shows the i2c scan results
+
+i2c:
+  sda: 11   # Nano A4
+  scl: 12   # Nano A5
+  frequency: 50kHz   # slow: the bus leaves the board over a cable  ... Defaults to 50kHz. Values are 10kHz, 50kHz, 100kHz, 200kHz, … 800kHz.
+  scan: true
+
+pca9554:   # PCA9557 on the dumb ESP32 PLC-100 V1 - same register map
+  - id: dumb_relays
+    address: 0x1A   # factory default, address jumper open
+
+switch:
+  # Head board - relays straight off Nano pins
+  - platform: gpio
+    name: "Head REL1"
+    id: h1
+    pin: 5    # D2
+  - platform: gpio
+    name: "Head REL2"
+    id: h2
+    pin: 6    # D3
+  - platform: gpio
+    name: "Head REL3"
+    id: h3
+    pin: 7    # D4
+  - platform: gpio
+    name: "Head REL4"
+    id: h4
+    pin: 8    # D5
+  - platform: gpio
+    name: "Head REL5"
+    id: h5
+    pin: 3    # A2
+  - platform: gpio
+    name: "Head REL6"
+    id: h6
+    pin: 4    # A3
+
+  # Dumb board - relays on IO1..IO6 of its PCA9557 (IO0 unused by design)
+  - platform: gpio
+    name: "Dumb REL1"
+    id: d1
+    pin: {pca9554: dumb_relays, number: 1, mode: OUTPUT}
+  - platform: gpio
+    name: "Dumb REL2"
+    id: d2
+    pin: {pca9554: dumb_relays, number: 2, mode: OUTPUT}
+  - platform: gpio
+    name: "Dumb REL3"
+    id: d3
+    pin: {pca9554: dumb_relays, number: 3, mode: OUTPUT}
+  - platform: gpio
+    name: "Dumb REL4"
+    id: d4
+    pin: {pca9554: dumb_relays, number: 4, mode: OUTPUT}
+  - platform: gpio
+    name: "Dumb REL5"
+    id: d5
+    pin: {pca9554: dumb_relays, number: 5, mode: OUTPUT}
+  - platform: gpio
+    name: "Dumb REL6"
+    id: d6
+    pin: {pca9554: dumb_relays, number: 6, mode: OUTPUT}
+
+# Walks every relay on both boards, 500 ms each.
+button:
+  - platform: restart
+    name: "Restart"
+  - platform: template
+    name: "Chase All Relays"
+    on_press:
+      - switch.turn_on: h1
+      - delay: 500ms
+      - switch.turn_off: h1
+      - switch.turn_on: h2
+      - delay: 500ms
+      - switch.turn_off: h2
+      - switch.turn_on: h3
+      - delay: 500ms
+      - switch.turn_off: h3
+      - switch.turn_on: h4
+      - delay: 500ms
+      - switch.turn_off: h4
+      - switch.turn_on: h5
+      - delay: 500ms
+      - switch.turn_off: h5
+      - switch.turn_on: h6
+      - delay: 500ms
+      - switch.turn_off: h6
+      - switch.turn_on: d1
+      - delay: 500ms
+      - switch.turn_off: d1
+      - switch.turn_on: d2
+      - delay: 500ms
+      - switch.turn_off: d2
+      - switch.turn_on: d3
+      - delay: 500ms
+      - switch.turn_off: d3
+      - switch.turn_on: d4
+      - delay: 500ms
+      - switch.turn_off: d4
+      - switch.turn_on: d5
+      - delay: 500ms
+      - switch.turn_off: d5
+      - switch.turn_on: d6
+      - delay: 500ms
+      - switch.turn_off: d6

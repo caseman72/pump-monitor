@@ -1,0 +1,181 @@
+# Chaining test - two Canaduino ESP32 PLC-100 V1 boards, ONE ESP32-C6.
+#
+# Board #1 ("head"): C6-DevKitC in its socket, runs this firmware.
+# Board #2 ("dumb"): NO ESP module. Its 6 relays sit on a PCA9557 I2C
+#   expander, so board #1 drives them directly over the I2C bus. No second
+#   firmware, no UART, no DO->DI wiring.
+#
+# Per the PLC-100 V1 schematic (ESP32 PLC 100 V1_SCH.pdf):
+#   PCA9557 address pins: A0=GND, A2=GND, A1=10k pull-up (-> 0x1A).
+#   The 2-pin "Addr" jumper shorts A1 to GND (-> 0x18).
+#   DUMB-BOARD 3.3V (found + fixed 2026-08-27): the V1's internal 3.3V rail
+#     (PCA9557 VDD, the 3.3V LED) is fed by the DevKitC's 3V3 pin, NOT by the
+#     board. With the socket empty the LED is dim, the expander lives on
+#     leakage, and the rail folds once any 3 relays are on (PCA9557 resets,
+#     every write NACKs "I2C I/O error: 2"; recovery needs a dumb-board
+#     power cycle + head Restart). The Qwiic 3V3 pin is a SEPARATE output -
+#     feeding it does nothing. FIX: 5V->3.3V buck from the board's POWER OUT
+#     5V/GND into the DevKitC socket's 3V3 pin (meter it first). Verified:
+#     LED bright, all six dumb relays on together, zero I2C errors. A seated
+#     C6 DevKitC (not running i2c:) does the same job.
+#
+# WIRING
+#   Board #2: leave ESP socket EMPTY; SHORT the "Addr" jumper (-> 0x18);
+#             feed its own 12-24V (relay coils come from its own 5V buck).
+#   Board #1: "Addr" jumper OPEN (stays 0x1A).
+#   Qwiic/I2C header board #1 -> board #2, straight through, 3 wires:
+#       GND  -> GND      (black on a Qwiic cable)
+#       SDA  -> SDA      (blue)
+#       SCL  -> SCL      (yellow)
+#       3.3V -> not needed (both boards have their own LDO; red wire can
+#               be left connected on a stock Qwiic cable - it only ties
+#               the two 3.3V rails together)
+#   Keep the cable short (< ~1 m, boards side by side on the DIN rail).
+#   Longer runs: keep the 50 kHz bus below, add 2.2-4.7k pull-ups at the
+#   far end, or use a P82B715 / LTC4311 extender.
+#
+# PASS: boot log i2c scan finds 0x18, 0x1A and 0x68 (RTC on board #1).
+#       Toggling "B2 REL1..6" in HA clicks the relays on board #2 and
+#       "B1 REL1..6" clicks board #1. Both expanders must respond; if only
+#       0x1A shows, the Addr jumper on #2 isn't shorted or SDA/SCL swapped.
+##
+# NOTE: the dumb board's RTC stays on the bus at 0x68 (powered from its
+# 3.3V rail, battery or not), colliding with the head's RTC. Harmless for
+# relays, but never use an I2C RTC as `time:` on a chained node - use
+# platform: homeassistant/sntp, or desolder the dumb board's RTC.
+# Upload: ./upload.sh test-chaining.yaml  (or esphome run with -s subs)
+substitutions:
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+
+esphome:
+  name: test-chaining
+  friendly_name: Test Chaining
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+
+api:    # unencrypted - bench rig only
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: DEBUG   # boot log shows the i2c scan results
+
+i2c:
+  sda: 6
+  scl: 7
+  frequency: 50kHz   # slow: the bus leaves the board over a cable  ... Defaults to 50kHz. Values are 10kHz, 50kHz, 100kHz, 200kHz, … 800kHz.
+  scan: true
+
+pca9554:   # PCA9557 - same register map
+  - id: b1_relays
+    address: 0x1A   # board #1, Addr jumper open
+  - id: b2_relays
+    address: 0x18   # board #2, Addr jumper shorted
+
+# Relays are on IO1..IO6 on both boards (IO0 is the PCA9557 open-drain
+# pin, unused by the designer).
+switch:
+  - platform: gpio
+    name: "B1 REL1"
+    id: b1r1
+    pin: {pca9554: b1_relays, number: 1, mode: OUTPUT}
+  - platform: gpio
+    name: "B1 REL2"
+    id: b1r2
+    pin: {pca9554: b1_relays, number: 2, mode: OUTPUT}
+  - platform: gpio
+    name: "B1 REL3"
+    id: b1r3
+    pin: {pca9554: b1_relays, number: 3, mode: OUTPUT}
+  - platform: gpio
+    name: "B1 REL4"
+    id: b1r4
+    pin: {pca9554: b1_relays, number: 4, mode: OUTPUT}
+  - platform: gpio
+    name: "B1 REL5"
+    id: b1r5
+    pin: {pca9554: b1_relays, number: 5, mode: OUTPUT}
+  - platform: gpio
+    name: "B1 REL6"
+    id: b1r6
+    pin: {pca9554: b1_relays, number: 6, mode: OUTPUT}
+
+  - platform: gpio
+    name: "B2 REL1"
+    id: b2r1
+    pin: {pca9554: b2_relays, number: 1, mode: OUTPUT}
+  - platform: gpio
+    name: "B2 REL2"
+    id: b2r2
+    pin: {pca9554: b2_relays, number: 2, mode: OUTPUT}
+  - platform: gpio
+    name: "B2 REL3"
+    id: b2r3
+    pin: {pca9554: b2_relays, number: 3, mode: OUTPUT}
+  - platform: gpio
+    name: "B2 REL4"
+    id: b2r4
+    pin: {pca9554: b2_relays, number: 4, mode: OUTPUT}
+  - platform: gpio
+    name: "B2 REL5"
+    id: b2r5
+    pin: {pca9554: b2_relays, number: 5, mode: OUTPUT}
+  - platform: gpio
+    name: "B2 REL6"
+    id: b2r6
+    pin: {pca9554: b2_relays, number: 6, mode: OUTPUT}
+
+# Walks every relay on both boards, 500 ms each, so a single button press
+# audibly proves the whole chain.
+button:
+  - platform: template
+    name: "Chase All Relays"
+    on_press:
+      - switch.turn_on: b1r1
+      - delay: 500ms
+      - switch.turn_off: b1r1
+      - switch.turn_on: b1r2
+      - delay: 500ms
+      - switch.turn_off: b1r2
+      - switch.turn_on: b1r3
+      - delay: 500ms
+      - switch.turn_off: b1r3
+      - switch.turn_on: b1r4
+      - delay: 500ms
+      - switch.turn_off: b1r4
+      - switch.turn_on: b1r5
+      - delay: 500ms
+      - switch.turn_off: b1r5
+      - switch.turn_on: b1r6
+      - delay: 500ms
+      - switch.turn_off: b1r6
+      - switch.turn_on: b2r1
+      - delay: 500ms
+      - switch.turn_off: b2r1
+      - switch.turn_on: b2r2
+      - delay: 500ms
+      - switch.turn_off: b2r2
+      - switch.turn_on: b2r3
+      - delay: 500ms
+      - switch.turn_off: b2r3
+      - switch.turn_on: b2r4
+      - delay: 500ms
+      - switch.turn_off: b2r4
+      - switch.turn_on: b2r5
+      - delay: 500ms
+      - switch.turn_off: b2r5
+      - switch.turn_on: b2r6
+      - delay: 500ms
+      - switch.turn_off: b2r6
