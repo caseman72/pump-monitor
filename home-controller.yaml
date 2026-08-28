@@ -159,6 +159,9 @@ globals:
   - id: lawn_aa_restore
     type: bool
     initial_value: "false"
+  - id: lawn_next_disabled    # bitmask of zones the Next button disabled this cycle
+    type: uint32_t
+    initial_value: "0"
 
 interval:
   - interval: 500ms
@@ -186,11 +189,14 @@ interval:
                 id(lawn_aa_restore) = false;
                 id(lawn_auto_advance).turn_on();
               }
-              // put back any zone a Next press disabled
+              // put back ONLY the zones a Next press disabled - a zone the
+              // user disabled by hand stays disabled
               for (size_t i = 0; i < id(lawn_controller).number_of_valves(); i++) {
+                if (!(id(lawn_next_disabled) & (1u << i))) continue;
                 auto *en = id(lawn_controller).enable_switch(i);
                 if (en != nullptr && !en->state) en->turn_on();
               }
+              id(lawn_next_disabled) = 0;
             }
             id(lawn_prev_running) = running;
             if (running) {
@@ -357,8 +363,8 @@ button:
   # last zone, so end the walk by turning the main switch off (shutdown).
   #
   # Next DISABLES the zone it leaves (see the second lambda) so the cycle
-  # never sweeps it back up; the interval re-enables every zone when the
-  # cycle ends.
+  # never sweeps it back up; the interval re-enables those zones (and only
+  # those) when the cycle ends.
   - platform: template
     name: "Home Lawn Next Zone"
     icon: "mdi:skip-next"
@@ -392,10 +398,13 @@ button:
           // 2, then 1 again). next_valve_number_in_cycle_() calls
           // next_valve_number_(include_disabled=false), so a DISABLED valve is
           // never revisited - and unlike clearing auto_advance, the rest of
-          // the cycle still runs. All valves are re-enabled when the cycle
-          // ends (see the interval below).
+          // the cycle still runs. Zones disabled HERE are re-enabled when the
+          // cycle ends (see the interval above); hand-disabled ones are not.
           auto *en = id(lawn_controller).enable_switch(v.value());
-          if (en != nullptr) en->turn_off();
+          if (en != nullptr && en->state) {
+            en->turn_off();
+            id(lawn_next_disabled) |= (1u << v.value());
+          }
           id(lawn_controller).next_valve();
 
   # Run the full cycle from a button, for consistency with the Run Zone
