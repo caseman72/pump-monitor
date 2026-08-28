@@ -22,9 +22,9 @@ Decisions (Casey, 2026-08-27):
   handled and ships tuning sensors for free.
 - The setpoint is a plain HA number (psi), changeable any time like a
   mini-split. Default 55.
-- ICE High Trip stays alert-only (relay not wired). Raise it to ~62 during
-  tuning so autotune's overshoot doesn't latch it every cycle; put it back
-  to 58 after.
+- ICE is unrelated to the loop and stays alert-only at 58. Autotune on
+  12/14 heads can't reach it (natural 55.8 / 55.5); 7 heads (59.3) alerts
+  with or without the PID, as it does today.
 - Closed floor is **pulse 1 (water-zero)**, never pulse 0 / flow 0% — those
   are seat drives, only done with the pump off (README).
 
@@ -36,9 +36,9 @@ both CVs wide open ≈ 29 GPM near shutoff. Reachable floor with both CVs
 
 | line | natural psi | floor, both CVs 100% (est.) | usable autotune SP |
 |---:|---:|---:|---|
-| 7 heads | 59.3 | ~56.8 | 57.5 |
-| 12 heads | 55.8 | ~52.9 | 54 |
+| 12 heads | 55.8 | ~52.9 | 54 (tune here first) |
 | 14 heads | 55.5 | ~51 | 52.5 |
+| 7 heads | 59.3 | ~56.8 | 57.5 |
 
 Autotune is a relay test: it bangs the output 0 ↔ 100 % and needs pressure
 to cross the setpoint **both ways**. So the SP for a tuning run must sit
@@ -93,23 +93,25 @@ the yaml.
 
 ## Tuning procedure
 
+The pump never turns off, so every step is live. The loop can only open
+the valves when pressure is ABOVE the setpoint, so a setpoint above
+anything the pump can make (70) is the "do nothing" state.
+
 1. Flash. Pressure Control OFF. Confirm nothing moves on boot.
-2. Dry logic check, pump OFF, valves seated (pulse 0): Pressure Control
-   ON, SP 30 → pressure ~0 < SP → output 0 % → floor = pulse 1, so BOTH
-   valves should step 0 → 1 once (log: `output 0% -> CV1 pulse 1`) and
-   then nothing else moves. That exercises sensor → pid → output → pulse
-   script. The above-setpoint path can't be faked with the pump off (the
-   deadband swallows a sub-0.5 psi error) — it's first seen live in step 4.
-3. ICE High Trip → 62. Run the 14-head set (A-1 + B-3). Setpoint 52.5.
-4. Pressure Control ON, press PID Autotune. Recycle Output % bangs
-   0 ↔ 200 and pressure oscillates around 52.5. Autotune logs
-   `PID Autotune finished` with kp/ki/kd (also on the PID Kp/Ki/Kd sensors).
-5. Set the values on the Kp/Ki/Kd numbers to test live; step SP
-   52.5 → 54 → 52.5 and watch settling. Pass: no hunting beyond ±1 pulse,
+2. Chain check: Pressure Setpoint 70, Pressure Control ON → output 0 % →
+   floor = pulse 1, so both seated valves step 0 → 1 once (log: `output
+   0% -> CV1 pulse 1`) and then nothing else moves. Pulse 1 weeps ~1 %
+   flow (~0.3 GPM) to the pond — expected; only pulse 0 seals.
+3. Run the 12-head set (A-4 + A-3, natural 55.8). Setpoint 54.
+4. Press PID Autotune. Recycle Output % bangs 0 ↔ 200 and pressure
+   oscillates around 54. Autotune logs `PID Autotune finished` with
+   kp/ki/kd (also on the PID Kp/Ki/Kd Active sensors).
+5. Type the values into the Kp/Ki/Kd numbers to run them live; step SP
+   54 → 55 → 54 and watch settling. Pass: no hunting beyond ±1 pulse,
    overshoot < 2 psi. Then bake them into `control_parameters`.
-6. Repeat on 12 heads (SP 54) — should hold with the same gains. Then 7
-   heads: SP 57.5 (reachable) and SP 50 (unreachable — confirm valves go
-   100 % and behave when SP is raised again).
+6. 14 heads (SP 52.5) — should hold with the same gains. Then 7 heads:
+   SP 57.5 (reachable) and SP 50 (unreachable — confirm valves go 100 %
+   and behave when SP is raised again).
 7. Disturbance test: a lawn zone on top of a line (−4 psi step).
 8. Record every run below; commit the gains.
 
