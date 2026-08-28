@@ -1,0 +1,465 @@
+# Home Controller - ESP32-C6-DevKitC in a Canaduino ESP32 PLC-100 V1 (a
+# THIRD board, carbon copy of pump-controller.yaml but with 4 lawn zones on
+# REL1-REL4 and no Field A lines). Standard 24 VAC solenoids on the board's
+# relays. Solenoids are plain GPIO relays, no H-bridge. No display.
+#
+# Relays: PCA9557 I2C expander @ 0x1A -> ULN2003 (IO1..IO6). Same board/
+# pinout as pump-monitor / pump-controller.
+#
+# Upload:  ./upload.sh <this-board-ip> home-controller.yaml
+# First flash over USB: ./upload.sh /dev/cu.usbmodemXXXX home-controller.yaml
+# Always pass this board's address: upload.sh's default (DEVICE_IP in
+# secrets.h) is the pump-monitor board, and it injects secrets from secrets.h.
+
+substitutions:
+  # Lawn zone-transition gap. An auto-advance transition costs ONE gap, so a
+  # full lawn cycle is (zone + zone + lawn_open_delay). Pressing Next costs a
+  # DOUBLE gap - the component's interrupt path sets the timer to
+  # "switching_delay_.value() * 2" (sprinkler.cpp) - so the Next re-plan below
+  # adds 2 x lawn_open_delay, measured at 10 s from 1 fps screen captures.
+  # INTEGER SECONDS, not a time value: it is spliced raw into C++ lambdas as
+  # well as used as "${lawn_open_delay}s" in YAML. "5s" here breaks the build.
+  lawn_open_delay: "5"
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ap_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+  api_key: "PLACEHOLDER"
+
+esphome:
+  name: home-controller
+  friendly_name: Home Controller
+  on_boot:
+    # Battery test for the DS3231: read the CHIP (RealTimeClock::now() only
+    # reports system time - ds1307.read_time is what actually talks to 0x68)
+    # and latch it before SNTP has a chance to correct anything. A dead coin
+    # cell still ACKs on i2c, so presence in the bus scan proves nothing; this
+    # boot value after a power cut is the real evidence.
+    priority: -100
+    then:
+      - ds1307.read_time: rtc_time
+      - lambda: |-
+          // Report the RAW chip contents, valid or not: ESPTime::is_valid()
+          // rejects year < 2019, so a never-written RTC (2000-01-01) would
+          // otherwise just read "INVALID" and hide which failure it is.
+          // 2000-01-01 = never set / lost power. A real date = battery held.
+          auto t = id(rtc_time).now();
+          char buf[72];
+          snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d%s",
+                   t.year, t.month, t.day_of_month, t.hour, t.minute, t.second,
+                   t.is_valid() ? "" : "  <- unset/invalid");
+          id(rtc_boot_time) = std::string(buf);
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  power_save_mode: NONE
+  # Never self-reboot on a network blip. A reboot mid-irrigation drops every
+  # line this board holds open; with 3-4 hour runs that silently aborts a set.
+  reboot_timeout: 0s
+  ap:
+    ssid: "Home-Controller"
+    password: ${ap_password}
+
+captive_portal:
+
+api:
+  encryption:
+    key: ${api_key}
+  reboot_timeout: 0s   # same reason as wifi: HA restarting must not reboot us
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: INFO
+
+external_components:
+  - source:
+      type: local
+      path: components   # pca9554 override: preserves relay outputs across
+                         # reboot/OTA instead of driving them all low at init
+
+i2c:   # REQUIRED - this is the bus the PCA9557 relay expander lives
+  sda: 6   # on (every zone relay is driven through it). NOT a temp-sensor
+  scl: 7   # bus - do not remove.
+  scan: true
+
+pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
+  - id: relay_expander
+    address: 0x1A
+
+# Raw relay outputs -> 24 VAC solenoids. Internal: the sprinkler component
+# drives these via valve_switch_id; HA sees the sprinkler "zone" switches,
+# not these raw relays.
+switch:
+  - platform: gpio
+    id: rel_lawn1
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 1, mode: OUTPUT}
+  - platform: gpio
+    id: rel_lawn2
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 2, mode: OUTPUT}
+  - platform: gpio
+    id: rel_lawn3
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 3, mode: OUTPUT}
+  - platform: gpio
+    id: rel_lawn4
+    internal: true
+    restore_mode: ALWAYS_OFF
+    pin: {pca9554: relay_expander, number: 4, mode: OUTPUT}
+
+time:
+  - platform: ds1307          # the DS3231 at 0x68 - register-compatible
+    id: rtc_time
+    timezone: America/Los_Angeles
+    update_interval: never    # only read on demand, never clobber system time
+  - platform: sntp
+    id: net_time
+    timezone: America/Los_Angeles
+    on_time_sync:
+      then:
+        - ds1307.write_time:            # push good network time into the chip
+            id: rtc_time
+
+globals:
+  - id: rtc_boot_time
+    type: std::string
+    initial_value: '"(not read)"'
+  - id: lawn_prev_running
+    type: bool
+    initial_value: "false"
+  - id: lawn_cycle_start
+    type: uint32_t
+    initial_value: "0"
+  - id: lawn_total_elapsed
+    type: uint32_t
+    initial_value: "0"
+  - id: lawn_zone_elapsed
+    type: uint32_t
+    initial_value: "0"
+  - id: lawn_total_remaining
+    type: uint32_t
+    initial_value: "0"
+  - id: lawn_planned_total
+    type: uint32_t
+    initial_value: "0"
+  - id: lawn_aa_restore
+    type: bool
+    initial_value: "false"
+
+interval:
+  - interval: 500ms
+    then:
+      - lambda: |-
+          {
+            bool running = id(lawn_main).state;
+            if (running && !id(lawn_prev_running)) {   // rising edge = new cycle
+              id(lawn_cycle_start) = millis();
+              id(lawn_total_elapsed) = 0;
+              id(lawn_zone_elapsed) = 0;
+              size_t n = id(lawn_controller).number_of_valves();
+              uint32_t sum = 0;
+              for (size_t i = 0; i < n; i++)
+                sum += id(lawn_controller).valve_run_duration_adjusted(i);
+              id(lawn_planned_total) = n > 1 ? sum + ${lawn_open_delay} * (n - 1) : sum;
+            }
+            if (!running && id(lawn_prev_running)) {   // cycle ended: freeze elapsed
+              id(lawn_total_remaining) = 0;
+              id(lawn_zone_elapsed) = 0;
+              // Re-arm auto-advance, but ONLY if a Run Zone button cleared it
+              // (start_single_valve() calls set_auto_advance(false)). A
+              // deliberate manual toggle is left alone.
+              if (id(lawn_aa_restore)) {
+                id(lawn_aa_restore) = false;
+                id(lawn_auto_advance).turn_on();
+              }
+              // put back any zone a Next press disabled
+              for (size_t i = 0; i < id(lawn_controller).number_of_valves(); i++) {
+                auto *en = id(lawn_controller).enable_switch(i);
+                if (en != nullptr && !en->state) en->turn_on();
+              }
+            }
+            id(lawn_prev_running) = running;
+            if (running) {
+              id(lawn_total_elapsed) = (millis() - id(lawn_cycle_start)) / 1000;
+              // Gate on a LIVE timer, not on active_valve(): the FSM designates
+              // the next valve at the START of the inter-zone gap, seconds
+              // before the switch opens. Holding the last value through the
+              // gap keeps zone elapsed + remaining == run duration.
+              auto v = id(lawn_controller).active_valve();
+              auto t = id(lawn_controller).time_remaining_active_valve();
+              if (v.has_value() && t.has_value() && t.value() > 0) {
+                uint32_t dur = id(lawn_controller).valve_run_duration_adjusted(v.value());
+                id(lawn_zone_elapsed) = dur > t.value() ? dur - t.value() : 0;
+              }
+              uint32_t plan = id(lawn_planned_total);
+              uint32_t el = id(lawn_total_elapsed);
+              id(lawn_total_remaining) = plan > el ? plan - el : 0;
+            }
+          }
+
+sprinkler:
+  # --- Home-house lawn: gap between zones (off, then on) ---
+  - id: lawn_controller
+    main_switch:
+      name: "Home Lawn"
+      id: lawn_main
+    auto_advance_switch:
+      name: "Home Lawn Auto Advance"
+      id: lawn_auto_advance
+      device_class: switch   # HA draws a state-aware toggle; a fixed icon cannot change with state
+    valve_open_delay: ${lawn_open_delay}s
+    next_prev_ignore_disabled: true   # once skipped, Next won't come back to it
+    valves:
+      - valve_switch: "Home Lawn Zone 1"
+        run_duration_number:
+          name: "Home Lawn Zone 1 Duration"
+          initial_value: 25
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
+          restore_value: true
+        enable_switch:
+          name: "Home Lawn Zone 1 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
+        valve_switch_id: rel_lawn1
+      - valve_switch: "Home Lawn Zone 2"
+        run_duration_number:
+          name: "Home Lawn Zone 2 Duration"
+          initial_value: 25
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
+          restore_value: true
+        enable_switch:
+          name: "Home Lawn Zone 2 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
+        valve_switch_id: rel_lawn2
+      - valve_switch: "Home Lawn Zone 3"
+        run_duration_number:
+          name: "Home Lawn Zone 3 Duration"
+          initial_value: 20
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
+          restore_value: true
+        enable_switch:
+          name: "Home Lawn Zone 3 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
+        valve_switch_id: rel_lawn3
+      - valve_switch: "Home Lawn Zone 4"
+        run_duration_number:
+          name: "Home Lawn Zone 4 Duration"
+          initial_value: 15
+          min_value: 1
+          max_value: 180
+          step: 1
+          unit_of_measurement: min
+          mode: box   # HA draws an input box instead of a slider
+          restore_value: true
+        enable_switch:
+          name: "Home Lawn Zone 4 Enabled"
+          device_class: switch
+          restore_mode: ALWAYS_ON   # a Next-skip is per-cycle; never boot with a zone parked off
+        valve_switch_id: rel_lawn4
+
+sensor:
+  # --- Home Lawn timers ---------------------------------------------------
+  # Zone Remaining reads the sprinkler component directly. The other three
+  # come from the globals kept by the 500ms interval above (wall-clock since
+  # the cycle started, against a planned total that Next re-plans). Idle reads
+  # 0, not NAN, so HA gauges/templates never have to guard against "unknown".
+  # Internal accounting is seconds; reported in minutes to match the durations.
+  - platform: template
+    name: "Home Lawn Zone Remaining"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: "mdi:timer-sand"
+    update_interval: 1s
+    lambda: |-
+      auto t = id(lawn_controller).time_remaining_active_valve();
+      if (!t.has_value()) return 0.0f;
+      return t.value() / 60.0f;
+  - platform: template
+    name: "Home Lawn Zone Elapsed"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: "mdi:timer-outline"
+    update_interval: 1s
+    lambda: |-
+      return id(lawn_zone_elapsed) / 60.0f;
+  - platform: template
+    name: "Home Lawn Total Remaining"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: "mdi:timer-sand-complete"
+    update_interval: 1s
+    lambda: |-
+      return id(lawn_total_remaining) / 60.0f;
+  - platform: template
+    name: "Home Lawn Total Elapsed"
+    unit_of_measurement: min
+    accuracy_decimals: 1
+    icon: "mdi:timer-check-outline"
+    update_interval: 1s
+    lambda: |-
+      return id(lawn_total_elapsed) / 60.0f;
+
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: template
+    name: "RTC Time At Boot"
+    icon: "mdi:clock-check-outline"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: 'return {id(rtc_boot_time)};'
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    ssid:
+      name: "WiFi Network"
+      entity_category: diagnostic
+
+button:
+  # Walk the zones by hand for inspection: start the controller from HA,
+  # check zone 1, press Next, check zone 2, ... Next wraps around past the
+  # last zone, so end the walk by turning the main switch off (shutdown).
+  #
+  # Next DISABLES the zone it leaves (see the second lambda) so the cycle
+  # never sweeps it back up; the interval re-enables every zone when the
+  # cycle ends.
+  - platform: template
+    name: "Home Lawn Next Zone"
+    icon: "mdi:skip-next"
+    on_press:
+      - lambda: |-
+          // Re-plan: the rest of the current zone is abandoned, so the cycle now
+          // ends after one gap + the next zone. Computed BEFORE next_valve() so
+          // active_valve() still reports the zone being skipped. The next zone
+          // is the first ENABLED one after it (next_prev_ignore_disabled), so
+          // walk past anything an earlier Next already disabled.
+          auto v = id(lawn_controller).active_valve();
+          if (v.has_value()) {
+            size_t n = id(lawn_controller).number_of_valves();
+            size_t nxt = v.value();
+            for (size_t k = 1; k < n; k++) {
+              size_t c = (v.value() + k) % n;
+              auto *en = id(lawn_controller).enable_switch(c);
+              if (en == nullptr || en->state) { nxt = c; break; }
+            }
+            id(lawn_planned_total) = id(lawn_total_elapsed) + 2 * ${lawn_open_delay}
+                                    + id(lawn_controller).valve_run_duration_adjusted(nxt);
+          }
+      - lambda: |-
+          // Disable the zone we're leaving. The component does NOT mark an
+          // interrupted valve complete, so auto-advance would otherwise sweep
+          // it back up at the end of the cycle (press Next in zone 1 -> got
+          // 2, then 1 again). next_valve_number_in_cycle_() calls
+          // next_valve_number_(include_disabled=false), so a DISABLED valve is
+          // never revisited - and unlike clearing auto_advance, the rest of
+          // the cycle still runs. All valves are re-enabled when the cycle
+          // ends (see the interval below).
+          auto v = id(lawn_controller).active_valve();
+          if (v.has_value()) {
+            auto *en = id(lawn_controller).enable_switch(v.value());
+            if (en != nullptr) en->turn_off();
+          }
+      - sprinkler.next_valve: lawn_controller
+
+  # Run ONE zone, for checking heads without walking the whole cycle.
+  # start_single_valve() from idle interrupts nothing, so (unlike Next) there
+  # is no stop-everything-then-start transition. No-ops if a cycle is already
+  # running - taking over a running cycle is what Next is for.
+  # The button seeds the timer globals itself (and sets prev_running) so the
+  # interval's rising edge doesn't overwrite the plan with a full-cycle total:
+  # a single-zone run is just that zone's duration.
+  - platform: template
+    name: "Home Lawn Run Zone 1"
+    icon: "mdi:play-circle-outline"
+    on_press:
+      - lambda: |-
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(0);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 0);
+
+  - platform: template
+    name: "Home Lawn Run Zone 2"
+    icon: "mdi:play-circle-outline"
+    on_press:
+      - lambda: |-
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(1);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 1);
+
+  - platform: template
+    name: "Home Lawn Run Zone 3"
+    icon: "mdi:play-circle-outline"
+    on_press:
+      - lambda: |-
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(2);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 2);
+
+  - platform: template
+    name: "Home Lawn Run Zone 4"
+    icon: "mdi:play-circle-outline"
+    on_press:
+      - lambda: |-
+          if (id(lawn_controller).active_valve().has_value()) return;
+          if (id(lawn_auto_advance).state) id(lawn_aa_restore) = true;
+          id(lawn_cycle_start) = millis();
+          id(lawn_total_elapsed) = 0;
+          id(lawn_zone_elapsed) = 0;
+          id(lawn_planned_total) = id(lawn_controller).valve_run_duration_adjusted(3);
+          id(lawn_prev_running) = true;
+          id(lawn_controller).start_single_valve((size_t) 3);
+
+  - platform: restart
+    name: "Restart"
+    icon: "mdi:restart"
