@@ -126,11 +126,19 @@ switch:
     internal: true
     restore_mode: ALWAYS_OFF
     pin: {pca9554: relay_expander, number: 1, mode: OUTPUT}
+    on_turn_on:
+      - script.execute:
+          id: rtc_stamp
+          zone: 1
   - platform: gpio
     id: rel_lawn2
     internal: true
     restore_mode: ALWAYS_OFF
     pin: {pca9554: relay_expander, number: 2, mode: OUTPUT}
+    on_turn_on:
+      - script.execute:
+          id: rtc_stamp
+          zone: 2
   - platform: gpio
     id: rel_fielda1
     name: "Field A Line 1"
@@ -343,6 +351,26 @@ sensor:
     update_interval: 60s
     entity_category: diagnostic
 
+  # ---- Zone start stamps ----
+  # Stamped from the RTC-backed clock every time a zone relay energizes
+  # (any path: schedule, Run Zone, Next, Run All). device_class timestamp =
+  # HA shows it as a datetime / "N minutes ago". Not restored across a
+  # reboot (empty until the next start); the recorder keeps the history.
+  - platform: template
+    name: "RTC Zone 1"
+    id: rtc_zone1
+    device_class: timestamp
+    icon: "mdi:clock-start"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "RTC Zone 2"
+    id: rtc_zone2
+    device_class: timestamp
+    icon: "mdi:clock-start"
+    accuracy_decimals: 0
+    update_interval: never
+
 text_sensor:
   - platform: template
     name: "RTC Time At Boot"
@@ -357,6 +385,26 @@ text_sensor:
     ssid:
       name: "WiFi Network"
       entity_category: diagnostic
+
+script:
+  # Publish "now" from the RTC-backed clock onto the zone's RTC sensor.
+  # Skipped if the clock isn't valid yet (no RTC, no SNTP) rather than
+  # publishing 1970.
+  - id: rtc_stamp
+    mode: queued
+    parameters:
+      zone: int
+    then:
+      - lambda: |-
+          auto t = id(rtc_time).now();
+          if (!t.is_valid()) { ESP_LOGW("rtc", "zone %d start: clock not valid, no stamp", zone); return; }
+          float ts = (float) t.timestamp;
+          switch (zone) {
+            case 1: id(rtc_zone1).publish_state(ts); break;
+            case 2: id(rtc_zone2).publish_state(ts); break;
+          }
+          ESP_LOGI("rtc", "zone %d start @ %04d-%02d-%02d %02d:%02d:%02d", zone,
+                   t.year, t.month, t.day_of_month, t.hour, t.minute, t.second);
 
 button:
   # Walk the zones by hand for inspection: start the controller from HA,

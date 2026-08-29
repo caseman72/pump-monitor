@@ -249,7 +249,7 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
   both valves and both positioning modes
 - `components/pca9554/` — local override of ESPHome's expander driver that
   preserves relay states across reboot/OTA (keeps the ICE loop closed)
-- `pump-controller.yaml` — 2nd C6/Canaduino board: the 2 lawn zones as a native ESPHome `sprinkler:` controller (valve_open_delay, Next/Run-Zone buttons, elapsed/remaining timers), Field A lines as plain relay switches for a future coordinating "brain", DS3231 RTC as a time source
+- `pump-controller.yaml` — 2nd C6/Canaduino board: the 2 lawn zones as a native ESPHome `sprinkler:` controller (valve_open_delay, Next/Run-Zone buttons, elapsed/remaining timers), Field A lines as plain relay switches for a future coordinating "brain", DS3231 RTC as a time source, `RTC Zone N` timestamp sensors stamped at every zone start
 - `pump-monitor-proof-of-concept.yaml` — single-valve bench-calibration rig this project grew
   out of (still what shipped the calibration data)
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
