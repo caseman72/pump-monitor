@@ -1,11 +1,22 @@
 #!/bin/bash
-# OTA upload script for pump-monitor
+# OTA upload script for the pump-monitor boards
 # Parses secrets.h and injects values as ESPHome substitutions so no
 # credentials live in the YAML.
 #
-# Usage: ./upload.sh [device] [config] [secrets]
-#   device defaults to DEVICE_IP from secrets.h (mDNS does not resolve on
-#   every network; the router's DNS name is the ESPHome node name)
+# Usage: ./upload.sh <config.yaml> [device] [secrets]
+#   config   pump-monitor.yaml | pump-controller.yaml | home-controller.yaml
+#   device   defaults to DEVICE_IP_<CONFIG> from secrets.h, e.g.
+#            DEVICE_IP_PUMP_CONTROLLER for pump-controller.yaml, else the
+#            node name as a DNS host. (mDNS does not resolve on every
+#            network; the router's DNS name is the ESPHome node name.)
+#
+# The config comes FIRST and picks its own board: with three boards on the
+# bench, "./upload.sh <ip>" used to flash pump-monitor.yaml onto whatever
+# board owned that IP. ESPHome OTA does not check node names, so the
+# mapping in secrets.h is the only guard. An explicit device is still
+# accepted as the 2nd arg for recovery (fallback hotspot 192.168.4.1).
+#
+# DRY_RUN=1 ./upload.sh <config> prints the resolved target and exits.
 #
 # Changing the OTA password: set the NEW value in OTA_PASSWORD and add
 #   #define OTA_OLD_PASSWORD "<current device password>"
@@ -15,8 +26,18 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG="${2:-pump-monitor.yaml}"
+CONFIG="${1:-}"
 SECRETS="${3:-secrets.h}"
+
+if [[ -z "$CONFIG" || ! "$CONFIG" =~ \.ya?ml$ ]]; then
+    echo "Usage: ./upload.sh <config.yaml> [device] [secrets]"
+    echo "  (the config comes first - it selects which board gets flashed)"
+    exit 1
+fi
+if [[ ! -f "$SCRIPT_DIR/$CONFIG" ]]; then
+    echo "Error: ${CONFIG} not found."
+    exit 1
+fi
 
 if [[ ! -f "$SCRIPT_DIR/$SECRETS" ]]; then
     echo "Error: ${SECRETS} not found. Copy secrets.example.h to ${SECRETS} and fill in values."
@@ -34,12 +55,18 @@ AP_PASSWORD=$(parse_secret AP_PASSWORD)
 OTA_PASSWORD=$(parse_secret OTA_PASSWORD)
 OTA_OLD_PASSWORD=$(parse_secret OTA_OLD_PASSWORD || true)
 API_KEY=$(parse_secret API_ENCRYPTION_KEY)
-DEVICE="${1:-$(parse_secret DEVICE_IP || true)}"
-
+# Per-config board address: pump-controller.yaml -> DEVICE_IP_PUMP_CONTROLLER
+NODE="$(basename "$CONFIG" .yaml)"
+IP_KEY="DEVICE_IP_$(echo "$NODE" | tr 'a-z-' 'A-Z_')"
+DEVICE="${2:-$(parse_secret "$IP_KEY" || true)}"
 if [[ -z "$DEVICE" ]]; then
-    echo "Error: no device given and DEVICE_IP not set in ${SECRETS}."
-    echo "Usage: ./upload.sh <device-ip-or-host> [config] [secrets]"
-    exit 1
+    DEVICE="$NODE"
+    echo "Note: ${IP_KEY} not set in ${SECRETS}; using DNS name '${DEVICE}'."
+fi
+
+echo "Target: ${CONFIG} -> ${DEVICE}"
+if [[ -n "${DRY_RUN:-}" ]]; then
+    exit 0
 fi
 
 SUBS=(

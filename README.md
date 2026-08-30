@@ -221,19 +221,24 @@ them as ESPHome substitutions:
 
 ```sh
 cp secrets.example.h secrets.h   # then fill in values
-./upload.sh                      # OTA to DEVICE_IP from secrets.h
-./upload.sh 192.168.1.50         # or an explicit device / hostname
+./upload.sh pump-monitor.yaml    # OTA to DEVICE_IP_PUMP_MONITOR from secrets.h
+./upload.sh home-controller.yaml # each config resolves its own board
+./upload.sh pump-monitor.yaml 192.168.4.1   # explicit device (recovery)
+DRY_RUN=1 ./upload.sh pump-controller.yaml  # show the target, flash nothing
 ```
 
-Note: mDNS may not resolve on your network (it doesn't on DD-WRT) — use
-the device IP or the router's DNS name (`pump-monitor`).
+The config comes first and selects the board (`DEVICE_IP_<CONFIG>`), so
+with three boards a config can't land on the wrong one — ESPHome OTA does
+not check node names. Note: mDNS may not resolve on your network (it
+doesn't on DD-WRT) — use the device IP or the router's DNS name
+(`pump-monitor`).
 
 If Wi-Fi is unreachable the device broadcasts a fallback hotspot
 (`Pump-Monitor`, password = `AP_PASSWORD`) — connect and reach it at
 192.168.4.1 to recover or OTA.
 
 To rotate the OTA password: set the new value in `OTA_PASSWORD`, add
-`#define OTA_OLD_PASSWORD "<current device password>"`, run `./upload.sh`
+`#define OTA_OLD_PASSWORD "<current device password>"`, run `./upload.sh <config>`
 once (it compiles the new password in while authenticating with the old),
 then delete the `OTA_OLD_PASSWORD` line.
 

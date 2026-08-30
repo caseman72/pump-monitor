@@ -18,5 +18,9 @@
 // Generate with: openssl rand -base64 32
 #define API_ENCRYPTION_KEY "your-base64-api-key"
 
-// Device address for OTA (DHCP lease or router DNS name); ./upload.sh <ip> overrides
-#define DEVICE_IP "192.168.1.50"
+// Board address per config for OTA (DHCP lease or router DNS name).
+// upload.sh picks DEVICE_IP_<CONFIG> from the yaml name, so a config can
+// only ever be flashed onto its own board. ./upload.sh <config> <ip> overrides.
+#define DEVICE_IP_PUMP_MONITOR    "192.168.1.50"
+#define DEVICE_IP_PUMP_CONTROLLER "192.168.1.51"
+#define DEVICE_IP_HOME_CONTROLLER "192.168.1.52"
