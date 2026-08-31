@@ -18,9 +18,12 @@
 #
 # DRY_RUN=1 ./upload.sh <config> prints the resolved target and exits.
 #
-# NEVER flash a controller while a zone is running: the OTA reboot drops the
-# zone relay mid-cycle and loses the cycle, its timers and the RTC stamp.
-# Wait for the cycle to finish (see README "Building & uploading").
+# NEVER flash pump-controller / home-controller while a lawn zone is
+# running: the zone relays are ALWAYS_OFF, so the OTA reboot closes the
+# 24 VAC solenoid mid-cycle and loses the cycle, its timers and the RTC
+# stamp. Wait for the cycle to finish. pump-monitor is OK to flash with the
+# pump running: the CVs hold position and the ICE relay holds through the
+# reset (see README "Building & uploading").
 #
 # Changing the OTA password: set the NEW value in OTA_PASSWORD and add
 #   #define OTA_OLD_PASSWORD "<current device password>"
