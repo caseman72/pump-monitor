@@ -477,6 +477,24 @@ Design notes:
       | 6 | 60.0 | **1.2** |
       | 5 | 60.4 | 0.9 |
 
+      ### psi directly from head count (fit to all 14 measured points, 2026-08-31)
+
+      For "what pressure will x heads give" without going through GPM:
+
+      **y = 60.6 − 0.030·x²** (y = pump psi, x = heads; CVs closed, no lawn
+      zone) — fit to the ten measured Field A/B points 5-19 heads (08-25/26
+      sweeps), rms 0.5 psi, worst point ~1 psi. Inverse:
+      x = √((60.6 − y)/0.030). Same shape as the pump curve with
+      ~5.1 GPM/head substituted in (0.001165·5.1² ≈ 0.030), so the A/B
+      zones flow a bit more per head than the 4.7 GPM used earlier.
+      - **C/D/E lines run ~1-1.5 psi ABOVE this** (distance → slightly less
+        flow → pump rides up its curve): all four measured 51 ± 1 psi
+        (51.4 / 51.7 / 51.4 / 50.3 for 18/18/19/21 heads). For them, "51-ish"
+        beats any formula. Single all-data compromise: y = 60.1 − 0.0258·x²
+        (±2 psi at the extremes).
+      - A running pump-lawn zone subtracts ~4 psi; any CV opening pulls
+        lower still — that's the PID's term, not the equation's.
+
       **⚠️ FITTED SHUTOFF ≈ 61.3 psi, NOT the ~65 psi the published Goulds
       curve implied.** Consistent with the measured ~52-62% efficiency (real
       curve sits below published). Caveat: all three points are 72-99 GPM,
