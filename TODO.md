@@ -886,6 +886,16 @@ screenshot reading needed for future line runs.
       exists; a few seconds of delay between zones. No solenoid timing
       exists (OpenSprinkler only has station delay / master on-off adjust).
 - [ ] MEGA2560 PLC-300 rejected: no ESPHome on AVR.
+- [ ] **Verify Field A relays ride through an OTA before any Field A
+      automation runs un-manned.** Bench, on pump-controller with a meter or
+      LED on the relay, no solenoid: switch a line ON, wait > 60 s (flash
+      flush), Restart from HA → stays energized; repeat with a real
+      `./upload.sh` → stays energized; then the failure case: switch ON and
+      flash within 10 s → expect it to drop (restored state not flushed).
+      Until this is done the flashing rule is "no zone running", Field A
+      lines included (README "Building & uploading"). The 2026-08-23 check
+      was the ICE relay on pump-monitor — same expander/override, inferred
+      for this board, not measured.
 
 ## 5. Calibration & sensors
 

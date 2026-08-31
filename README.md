@@ -219,24 +219,31 @@ not check node names. Note: mDNS may not resolve on your network (it
 doesn't on DD-WRT) — use the device IP or the router's DNS name
 (`pump-monitor`).
 
-**Flashing while the system is running** — an OTA is a soft reset, and the
-two valve types react differently:
+**Flashing rule: no zone running.** This is a PLC driving real equipment
+(a pump is ~$10K), not a website — the rule is deliberately simple and only
+rests on what has been verified. Before any `./upload.sh`, check the
+dashboard: no lawn zone running (pump lawn 19:00; home lawn 07:00 / 19:00
+on its days), and once Field A is automated, no Field A zone either. Wait
+for the cycle to finish. Also don't flash within a minute of toggling any
+relay switch — restored states are flushed to flash on a 60 s interval.
 
-- **pump-monitor: OK with the pump running and irrigation on.** The CVs are
-  motorised ball valves: unpowered they hold position, and nothing moves
-  them at boot. The ICE pump-loop relay holds through the reset (the PCA9557
-  keeps its outputs and the `components/pca9554` override preserves them at
-  init — bench-verified 2026-08-23, relay LED stayed lit through a Restart).
-  Cost of an OTA: a few seconds of pressure samples. Only a *power cut* opens
-  the loop, and that is by design (fail-stop).
-- **pump-controller / home-controller: NEVER flash while a lawn zone is
-  running.** Lawn zones are 24 VAC solenoids that need power to stay open,
-  and their relays are `ALWAYS_OFF` — the sprinkler cycle does not survive a
-  reboot, so the zone slams shut and the cycle, its timers and that start's
-  RTC stamp are lost (a stamp reaches flash up to 60 s after the start).
-  Check the dashboard — pump lawn 19:00, home lawn 07:00 / 19:00 on its
-  days — and wait for the cycle to finish. The Field A line relays on
-  pump-controller are `RESTORE_DEFAULT_OFF` and do resume through an OTA.
+What sits behind the rule (verified vs. inferred):
+
+- **Verified 2026-08-23 (bench, pump-monitor):** the ICE relay holds through a
+  Restart — the PCA9557 keeps its outputs across the ESP reset and the local
+  `components/pca9554` override preserves them at init. OTA is the same soft
+  reset. The CVs are motorised ball valves: unpowered they hold position and
+  nothing moves them at boot. So a pump-monitor OTA under load costs a few
+  seconds of pressure samples — but the rule above still applies; keep it
+  boring.
+- **Known loss:** lawn zones are 24 VAC solenoids (power = open) and their
+  relays are `ALWAYS_OFF`; the sprinkler cycle does not survive a reboot. An
+  OTA mid-cycle slams the zone shut and loses the cycle, its timers and that
+  start's RTC stamp.
+- **Inferred, NOT yet verified:** the Field A line relays
+  (`RESTORE_DEFAULT_OFF`) should ride through an OTA by the same expander
+  mechanism. Nothing is wired to them yet. Until it is bench-verified on
+  pump-controller (TODO §4), treat a running Field A line like a lawn zone.
 
 If Wi-Fi is unreachable the device broadcasts a fallback hotspot
 (`Pump-Monitor`, password = `AP_PASSWORD`) — connect and reach it at
