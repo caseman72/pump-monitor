@@ -558,6 +558,36 @@ Main line: ~1000 ft of 4"→3" aluminum latch-coupling pipe, 11 risers/openers
 | line 3 | 19 | **51.4** | 11:19-11:36; read 52.2 with one head off, 51.4 with all 19 on |
 | line 4 | 21 | **50.3** | 11:38-11:45 |
 
+**Rotation-set averages (recorder, multi-hour steady windows, zone runs
+excluded; computed 2026-08-31):**
+
+| Rotation set | Heads | Mean psi | sd | Window |
+|---|---:|---:|---:|---|
+| C3 | 19 | **51.27** | 0.06 | 8/28 09:00 → 8/29 08:08 (20.5 h) |
+| C1 | 18 | **51.06** | 0.07 | 8/29 08:45 → 8/30 06:45 (21.2 h) |
+| C4 | 21 | **49.73** | 0.16 | 8/30 09:15 → 8/31 06:45 (20.1 h) |
+| C2 | 18 | **51.03** | 0.07 | 8/31 09:11 → 11:15 (running) |
+| B2+B3 | 15 | **53.27** | 0.09 | 8/27 08:45 → 22:00 (13.2 h) |
+| B2+B3 −1 head | 14 | **53.96** | 0.07 | 8/27 23:15 → 8/28 05:45 (riser off) |
+| A4+B1 | 13 | **55.36** | 0.09 | 8/26 21:55 → 8/27 08:00 |
+| A1+A2+A3 | 19 | **49.47** | 0.17 | 8/26, three windows 10:00-19:25 |
+
+- Steady-state sd is 0.06-0.17 psi over tens of hours — the plant is VERY
+  quiet; supports a tight PID noiseband.
+- One head at 14-15 heads = **+0.69 psi measured** (B2+B3 riser-off step);
+  the fit's slope says 0.75. Second one-head datum after C3's +0.8 (08-24).
+- **⚠️ C3 ANOMALY — flows ~1 head short.** With 19 heads it should run
+  ~0.9 psi BELOW the 18-head lines; it runs 0.2 ABOVE (51.27 vs 51.06 /
+  51.03), and 1.8 psi above the other 19-head set (A1+A2+A3 49.47, of
+  which only ~1-1.5 is C/D/E routing). ≈ one head-equivalent not flowing:
+  plugged nozzle / stuck head / partly-open riser. Same signature in the
+  08-24 spot checks, stable all week — not noise (sd 0.06).
+  - [ ] Walk C3 on its next run (Friday) and count heads actually throwing
+        — expect ~18 of 19.
+- C-field line swap = ~19-22 psi for 1.5-2 min while the big line fills
+  (3 consecutive swaps 08-29/30/31) — normal, NOT a suction fault. Home
+  lawn's 07:00 run sags the pump ~1.5-4 psi for ~75 min (same pump).
+
 **KEY FINDING — the lines are nearly flat**: only ~1.4 psi spread across
 18→21 heads (51.4 / 51.7 / 51.4 / 50.3). The earlier pipe-count model
 predicted a much steeper psi-per-head slope; reality is far flatter because
