@@ -509,9 +509,10 @@ Design notes:
         lines: no correction (C lines sit on the equation with C3→18).
       - A/B-only variant (sharpest for small-zone work 5-14 heads):
         y = 60.6 − 0.030·x², rms 0.5 there.
-      - A running pump-lawn zone subtracts ~4 psi (home lawn's 07:00 run
-        ~1.5-4 for ~75 min); any CV opening pulls lower still — that's the
-        PID's term, not the equation's.
+      - A running lawn zone subtracts ~1.5-4 psi for ~75 min (schedule
+        since 2026-08-31: house lawn Sun/Mon/Wed/Fri, pump lawn Sat/Tue/Thu,
+        both at 07:00 and 19:00); any CV opening pulls lower still — that's
+        the PID's term, not the equation's.
 
       **⚠️ FITTED SHUTOFF ≈ 61.3 psi, NOT the ~65 psi the published Goulds
       curve implied.** Consistent with the measured ~52-62% efficiency (real
@@ -622,6 +623,9 @@ excluded; computed 2026-08-31):**
 - C-field line swap = ~19-22 psi for 1.5-2 min while the big line fills
   (3 consecutive swaps 08-29/30/31) — normal, NOT a suction fault. Home
   lawn's 07:00 run sags the pump ~1.5-4 psi for ~75 min (same pump).
+  Lawn schedule since 2026-08-31: house lawn Sun/Mon/Wed/Fri, pump lawn
+  Sat/Tue/Thu — one controller per day, 07:00 and 19:00 (pump lawn was
+  daily 06:00 before).
 
 **KEY FINDING — the lines are nearly flat**: only ~1.4 psi spread across
 18→21 heads (51.4 / 51.7 / 51.4 / 50.3). The earlier pipe-count model
