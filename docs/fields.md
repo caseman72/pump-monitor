@@ -48,10 +48,14 @@ Nozzles: **5/32" Rainbird** (~5.0 GPM/head at 50 psi at the nozzle,
 clean). Counts above are physically verified (supersede the earlier sketch
 estimate of 16/16/17/19).
 
-**Main line**: ~1000 ft of **4"→3" aluminum latch-coupling pipe**, 11
-risers/openers. Latch (lever-lock) couplings leak at the gaskets by design,
-unlike glued PVC — so flow through the pump exceeds nozzle flow, and there's
-friction loss between the pump and the field.
+**Main line**: ~1000 ft of **underground glued PVC, 4"→3"**, 11
+risers/openers — **no leaks** (corrected by Casey 2026-08-31; an earlier
+note here wrongly called it aluminum latch pipe). The risers' gaskets can
+leak but are maintained (replaced when old) and closed risers hold. The
+aluminum latch-coupling pipe is the **laterals** (the field lines
+themselves) — those leak at the lever-lock gaskets by design, so flow
+through the pump still exceeds nozzle flow when a line is open, and the
+mainline contributes friction loss only (measured 3.8 psi at ~99 GPM).
 
 Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 (morning normally; evenings when the schedule is flipped).
