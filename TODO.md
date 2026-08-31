@@ -481,10 +481,13 @@ Design notes:
       - **Multi-line correction (Casey's rule, 2026-08-31): same-field
         multi-line sets act like count +1** (A triples measured +1.3 to
         +1.6 effective heads, B pairs +0.8 to +0.9; extra open line = extra
-        latch-gasket leakage). **Mixed A+B sets flip: count −1** (three
-        independent runs at −0.3 to −1.0, incl. both 14-head A+B sets at
-        55.4-55.5 psi ≈ eff 13). Single lines: no correction (C lines sit
-        on the equation with C3→18).
+        LATERAL latch-gasket leakage — the mainline is tight glued PVC).
+        **Sets including A4 flip: count −1** (three independent runs at
+        −0.3 to −1.0, incl. both 14-head A4+B sets at 55.4-55.5 psi ≈ eff
+        13). A4 feeds straight off the pump with no mainline run — but the
+        MECHANISM for the lean reading is open: full pressure at its heads
+        should mean MORE flow, not less. Empirical rule for now. Single
+        lines: no correction (C lines sit on the equation with C3→18).
       - A/B-only variant (sharpest for small-zone work 5-14 heads):
         y = 60.6 − 0.030·x², rms 0.5 there.
       - A running pump-lawn zone subtracts ~4 psi (home lawn's 07:00 run
@@ -560,8 +563,9 @@ exactly how zone 1 relates to line 1.
 Head counts confirmed by physical count + line tests 2026-08-24
 (`docs/fields.md`; nozzles are **5/32" Rainbird**): line 1 = 6+8+1+3 = **18**,
 line 2 = 6+8+4 = **18**, line 3 = 6+8+5 = **19**, line 4 = 6+8+1+6 = **21**.
-Main line: ~1000 ft of 4"→3" aluminum latch-coupling pipe, 11 risers/openers
-(leaks at gaskets by design — not glued PVC).
+Main line: ~1000 ft of 4"→3" **underground glued PVC** — no leaks
+(corrected 2026-08-31; earlier notes said aluminum). 11 risers/openers,
+gaskets maintained. The leaking latch-coupling aluminum is the LATERALS.
 
 **Measured base pressures (recorder + Casey's notes, 2026-08-24 11:00-11:45):**
 
