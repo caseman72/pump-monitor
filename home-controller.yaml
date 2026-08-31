@@ -49,6 +49,19 @@ esphome:
                    t.year, t.month, t.day_of_month, t.hour, t.minute, t.second,
                    t.is_valid() ? "" : "  <- unset/invalid");
           id(rtc_boot_time) = std::string(buf);
+      # Re-publish the last zone starts kept in flash (see rtc_publish).
+      - script.execute:
+          id: rtc_publish
+          zone: 1
+      - script.execute:
+          id: rtc_publish
+          zone: 2
+      - script.execute:
+          id: rtc_publish
+          zone: 3
+      - script.execute:
+          id: rtc_publish
+          zone: 4
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -154,6 +167,22 @@ globals:
   - id: rtc_boot_time
     type: std::string
     initial_value: '"(not read)"'
+  - id: rtc_zone1_epoch      # last start of zone 1, UTC epoch; kept in flash
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  - id: rtc_zone2_epoch      # last start of zone 2, UTC epoch; kept in flash
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  - id: rtc_zone3_epoch      # last start of zone 3, UTC epoch; kept in flash
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  - id: rtc_zone4_epoch      # last start of zone 4, UTC epoch; kept in flash
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
   - id: lawn_prev_running
     type: bool
     initial_value: "false"
@@ -379,8 +408,8 @@ text_sensor:
   # HA shows it as a datetime / "N minutes ago". A text sensor (ISO-8601
   # UTC string) rather than a float sensor: float32 can only hold today's
   # epoch to the nearest 128 s, which put the stamps up to a minute off.
-  # Not restored across a
-  # reboot (empty until the next start); the recorder keeps the history.
+  # The epoch lives in a restored global, so the last start survives a
+  # reboot or power cut (rtc_publish re-publishes it at boot).
   - platform: template
     name: "RTC Zone 1"
     id: rtc_zone1
@@ -407,9 +436,10 @@ text_sensor:
     update_interval: never
 
 script:
-  # Publish "now" from the RTC-backed clock onto the zone's RTC text sensor.
+  # Stamp "now" from the RTC-backed clock as the zone's last start: store the
+  # epoch in a restored global (survives reboot / power cut) and publish it.
   # Skipped if the clock isn't valid yet (no RTC, no SNTP) rather than
-  # publishing 1970.
+  # stamping 1970.
   - id: rtc_stamp
     mode: queued
     parameters:
@@ -418,18 +448,41 @@ script:
       - lambda: |-
           auto t = id(rtc_time).now();
           if (!t.is_valid()) { ESP_LOGW("rtc", "zone %d start: clock not valid, no stamp", zone); return; }
-          // ISO-8601 in UTC (HA converts to local). Built from the epoch so the
-          // string is exact to the second regardless of the node's TZ setting.
-          char ts[24];
-          ESPTime::from_epoch_utc(t.timestamp).strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ");
           switch (zone) {
-            case 1: id(rtc_zone1).publish_state(ts); break;
-            case 2: id(rtc_zone2).publish_state(ts); break;
-            case 3: id(rtc_zone3).publish_state(ts); break;
-            case 4: id(rtc_zone4).publish_state(ts); break;
+            case 1: id(rtc_zone1_epoch) = (uint32_t) t.timestamp; break;
+            case 2: id(rtc_zone2_epoch) = (uint32_t) t.timestamp; break;
+            case 3: id(rtc_zone3_epoch) = (uint32_t) t.timestamp; break;
+            case 4: id(rtc_zone4_epoch) = (uint32_t) t.timestamp; break;
           }
           ESP_LOGI("rtc", "zone %d start @ %04d-%02d-%02d %02d:%02d:%02d", zone,
                    t.year, t.month, t.day_of_month, t.hour, t.minute, t.second);
+      - script.execute:
+          id: rtc_publish
+          zone: !lambda return zone;
+
+  # Publish a zone's stored start epoch on its RTC text sensor as ISO-8601 in
+  # UTC (HA converts to local). Built from the epoch so the string is exact to
+  # the second regardless of the node's TZ setting. 0 = never stamped: stays
+  # blank. Run at boot for every zone and by rtc_stamp after each start.
+  - id: rtc_publish
+    mode: queued
+    parameters:
+      zone: int
+    then:
+      - lambda: |-
+          uint32_t ep = 0;
+          text_sensor::TextSensor *s = nullptr;
+          switch (zone) {
+            case 1: ep = id(rtc_zone1_epoch); s = id(rtc_zone1); break;
+            case 2: ep = id(rtc_zone2_epoch); s = id(rtc_zone2); break;
+            case 3: ep = id(rtc_zone3_epoch); s = id(rtc_zone3); break;
+            case 4: ep = id(rtc_zone4_epoch); s = id(rtc_zone4); break;
+            default: return;
+          }
+          if (ep == 0) return;
+          char ts[24];
+          ESPTime::from_epoch_utc((time_t) ep).strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ");
+          s->publish_state(ts);
 
 button:
   # Walk the zones by hand for inspection: start the controller from HA,
