@@ -621,6 +621,20 @@ excluded; computed 2026-08-31):**
   08-24 spot checks (sd 0.06, not noise). **Use 18 effective heads for C3**
   in any feedforward/expected-pressure math. If curious: walk C3 on a
   Friday run and see which head isn't throwing.
+- **Lawn zone deltas, measured (2026-08-29/30 recorder windows; add the
+  effective heads to the running line's x in the psi equation):**
+
+  | zone | Δ psi (meas.) | +eff heads | ~GPM |
+  |---|---:|---:|---:|
+  | pump lawn z1 | −4.3 | +3.9 | 19 |
+  | pump lawn z2 | −3.8 | +3.4 | 17 |
+  | house lawn z1 | −4.1 | +3.4 | 17 |
+  | house lawn z2 | −3.2 | +2.7 | 13 |
+  | house lawn z3 | −1.9 | +1.7 | 8 |
+  | house lawn z4 | −0.5 | +0.4 | 2 |
+
+  (pump zones measured on C3 base 51.27, house zones on C4 base 49.73;
+  psi deltas shift with base — the eff-head numbers are the portable ones.)
 - C-field line swap = ~19-22 psi for 1.5-2 min while the big line fills
   (3 consecutive swaps 08-29/30/31) — normal, NOT a suction fault. Home
   lawn's 07:00 run sags the pump ~1.5-4 psi for ~75 min (same pump).
