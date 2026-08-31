@@ -459,23 +459,27 @@ Design notes:
       | 6 | 60.0 | **1.2** |
       | 5 | 60.4 | 0.9 |
 
-      ### psi directly from head count (fit to all 14 measured points, 2026-08-31)
+      ### psi directly from head count (fit to all 18 measured points, 2026-08-31)
 
       For "what pressure will x heads give" without going through GPM:
 
-      **y = 60.6 − 0.030·x²** (y = pump psi, x = heads; CVs closed, no lawn
-      zone) — fit to the ten measured Field A/B points 5-19 heads (08-25/26
-      sweeps), rms 0.5 psi, worst point ~1 psi. Inverse:
-      x = √((60.6 − y)/0.030). Same shape as the pump curve with
-      ~5.1 GPM/head substituted in (0.001165·5.1² ≈ 0.030), so the A/B
-      zones flow a bit more per head than the 4.7 GPM used earlier.
-      - **C/D/E lines run ~1-1.5 psi ABOVE this** (distance → slightly less
-        flow → pump rides up its curve): all four measured 51 ± 1 psi
-        (51.4 / 51.7 / 51.4 / 50.3 for 18/18/19/21 heads). For them, "51-ish"
-        beats any formula. Single all-data compromise: y = 60.1 − 0.0258·x²
-        (±2 psi at the extremes).
-      - A running pump-lawn zone subtracts ~4 psi; any CV opening pulls
-        lower still — that's the PID's term, not the equation's.
+      **y = 60.2 − 0.02794·x²** (y = pump psi, x = heads; CVs closed, no
+      lawn zone; C3 counts as 18 — see above). Chosen by Casey 2026-08-31
+      over the steeper A/B-only fit because it fits best at 15-21 heads —
+      the everyday rotation range: the three C 18-head long averages land
+      within ±0.13 psi. Implies ~4.9 GPM/head via the pump curve
+      (0.001165·4.9² ≈ 0.0280). Inverse: x = √((60.2 − y)/0.02794).
+      - Typical error ±0.7 psi across all 18 measured points; known
+        outliers: **C4 runs ~1.8 high for 21 heads** ("acts like a 20.3"),
+        the 08-26 A-field 18-head run was 1.4 low, and identical head
+        counts in different fields differ by up to 1.5 psi (the two
+        14-head sets) — head count gets you close, field routing sets the
+        rest.
+      - A/B-only variant (sharpest for small-zone work 5-14 heads):
+        y = 60.6 − 0.030·x², rms 0.5 there.
+      - A running pump-lawn zone subtracts ~4 psi (home lawn's 07:00 run
+        ~1.5-4 for ~75 min); any CV opening pulls lower still — that's the
+        PID's term, not the equation's.
 
       **⚠️ FITTED SHUTOFF ≈ 61.3 psi, NOT the ~65 psi the published Goulds
       curve implied.** Consistent with the measured ~52-62% efficiency (real
