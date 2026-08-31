@@ -58,8 +58,10 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 
 ## Field A — 4 zones (240 × 230 ft)
 
-Zones of **6, 6, 6, 7** heads; an optional **+2 per line** for the back
-yard. Separate from the C/D/E lines ("the other zones").
+Zones: **A1 = 6, A2 = 6, A3 = 6, A4 = 7** heads (order confirmed by Casey
+2026-08-31 — the numbering was swapped at some point, so notes from before
+then may use the old order, where the 7-head zone was A1); an optional
+**+2 per line** for the back yard. Separate from the C/D/E lines ("the other zones").
 
 **Geometry from the to-scale engineering drawing (read 2026-08-25):** the 4 lines span
 the 240 ft width at **~60 ft apart** (30 + 60 + 60 + 60 + 30 — the

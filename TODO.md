@@ -493,6 +493,16 @@ Design notes:
         counts in different fields differ by up to 1.5 psi (the two
         14-head sets) — head count gets you close, field routing sets the
         rest.
+      - **Field A counts CORRECTED 2026-08-31: A1=6, A2=6, A3=6, A4=7**
+        (numbering was swapped at some point; pre-swap notes call the 7-head
+        zone A-1 — see docs/fields.md).
+      - **Multi-line correction (Casey's rule, 2026-08-31): same-field
+        multi-line sets act like count +1** (A triples measured +1.3 to
+        +1.6 effective heads, B pairs +0.8 to +0.9; extra open line = extra
+        latch-gasket leakage). **Mixed A+B sets flip: count −1** (three
+        independent runs at −0.3 to −1.0, incl. both 14-head A+B sets at
+        55.4-55.5 psi ≈ eff 13). Single lines: no correction (C lines sit
+        on the equation with C3→18).
       - A/B-only variant (sharpest for small-zone work 5-14 heads):
         y = 60.6 − 0.030·x², rms 0.5 there.
       - A running pump-lawn zone subtracts ~4 psi (home lawn's 07:00 run
@@ -591,8 +601,8 @@ excluded; computed 2026-08-31):**
 | C2 | 18 | **51.03** | 0.07 | 8/31 09:11 → 11:15 (running) |
 | B2+B3 | 15 | **53.27** | 0.09 | 8/27 08:45 → 22:00 (13.2 h) |
 | B2+B3 −1 head | 14 | **53.96** | 0.07 | 8/27 23:15 → 8/28 05:45 (riser off) |
-| A4+B1 | 13 | **55.36** | 0.09 | 8/26 21:55 → 8/27 08:00 |
-| A1+A2+A3 | 19 | **49.47** | 0.17 | 8/26, three windows 10:00-19:25 |
+| A4+B1 (7+7) | 14 | **55.36** | 0.09 | 8/26 21:55 → 8/27 08:00 |
+| A1+A2+A3 (6+6+6) | 18 | **49.47** | 0.17 | 8/26, three windows 10:00-19:25 |
 
 - Steady-state sd is 0.06-0.17 psi over tens of hours — the plant is VERY
   quiet; supports a tight PID noiseband.
