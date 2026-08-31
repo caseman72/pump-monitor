@@ -18,6 +18,10 @@
 #
 # DRY_RUN=1 ./upload.sh <config> prints the resolved target and exits.
 #
+# NEVER flash a controller while a zone is running: the OTA reboot drops the
+# zone relay mid-cycle and loses the cycle, its timers and the RTC stamp.
+# Wait for the cycle to finish (see README "Building & uploading").
+#
 # Changing the OTA password: set the NEW value in OTA_PASSWORD and add
 #   #define OTA_OLD_PASSWORD "<current device password>"
 # The script compiles the new password into the firmware but authenticates
