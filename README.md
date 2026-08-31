@@ -233,14 +233,24 @@ not check node names. Note: mDNS may not resolve on your network (it
 doesn't on DD-WRT) — use the device IP or the router's DNS name
 (`pump-monitor`).
 
-**Never flash a controller while a zone is running.** OTA reboots the board:
-the zone relay drops mid-cycle, the sprinkler cycle is lost, and the elapsed
-timers and the RTC Zone stamp for that start go with it (a stamp only
-reaches flash up to 60 s after the start). Check the dashboard for a running
-zone — pump lawn 19:00, home lawn 07:00 / 19:00 on its days — and wait for
-the cycle to finish. (pump-monitor is the exception: the valves and the ICE
-relay hold their state across a reboot, so its OTA only costs a few seconds
-of pressure samples.)
+**Flashing while the system is running** — an OTA is a soft reset, and the
+two valve types react differently:
+
+- **pump-monitor: OK with the pump running and irrigation on.** The CVs are
+  motorised ball valves: unpowered they hold position, and nothing moves
+  them at boot. The ICE pump-loop relay holds through the reset (the PCA9557
+  keeps its outputs and the `components/pca9554` override preserves them at
+  init — bench-verified 2026-08-23, relay LED stayed lit through a Restart).
+  Cost of an OTA: a few seconds of pressure samples. Only a *power cut* opens
+  the loop, and that is by design (fail-stop).
+- **pump-controller / home-controller: NEVER flash while a lawn zone is
+  running.** Lawn zones are 24 VAC solenoids that need power to stay open,
+  and their relays are `ALWAYS_OFF` — the sprinkler cycle does not survive a
+  reboot, so the zone slams shut and the cycle, its timers and that start's
+  RTC stamp are lost (a stamp reaches flash up to 60 s after the start).
+  Check the dashboard — pump lawn 19:00, home lawn 07:00 / 19:00 on its
+  days — and wait for the cycle to finish. The Field A line relays on
+  pump-controller are `RESTORE_DEFAULT_OFF` and do resume through an OTA.
 
 If Wi-Fi is unreachable the device broadcasts a fallback hotspot
 (`Pump-Monitor`, password = `AP_PASSWORD`) — connect and reach it at
