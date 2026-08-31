@@ -238,8 +238,8 @@ doesn't on DD-WRT) — use the device IP or the router's DNS name
 rests on what has been verified. Before any `./upload.sh`, check the
 dashboard: no lawn zone running. Schedule (since 2026-08-31): one
 controller per day, both slots — house lawn Sun/Mon/Wed/Fri, pump lawn
-Sat/Tue/Thu, each at 07:00 and 19:00 (runs ~75 min) — so avoid ~07:00-08:30
-and ~19:00-20:30 every day. Once Field A is automated, no Field A zone
+Sat/Tue/Thu, each at 07:00 and 19:00 (house ~65 min: zones 20/20/15/10;
+pump ~30 min: 15/15) — so avoid ~07:00-08:15 and ~19:00-20:15 every day. Once Field A is automated, no Field A zone
 either. Wait
 for the cycle to finish. Also don't flash within a minute of toggling any
 relay switch — restored states are flushed to flash on a 60 s interval.
