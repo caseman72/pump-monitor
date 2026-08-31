@@ -594,14 +594,12 @@ excluded; computed 2026-08-31):**
   quiet; supports a tight PID noiseband.
 - One head at 14-15 heads = **+0.69 psi measured** (B2+B3 riser-off step);
   the fit's slope says 0.75. Second one-head datum after C3's +0.8 (08-24).
-- **⚠️ C3 ANOMALY — flows ~1 head short.** With 19 heads it should run
-  ~0.9 psi BELOW the 18-head lines; it runs 0.2 ABOVE (51.27 vs 51.06 /
-  51.03), and 1.8 psi above the other 19-head set (A1+A2+A3 49.47, of
-  which only ~1-1.5 is C/D/E routing). ≈ one head-equivalent not flowing:
-  plugged nozzle / stuck head / partly-open riser. Same signature in the
-  08-24 spot checks, stable all week — not noise (sd 0.06).
-  - [ ] Walk C3 on its next run (Friday) and count heads actually throwing
-        — expect ~18 of 19.
+- **C3 acts like an 18** (Casey, 2026-08-31): 19 physical heads but it runs
+  0.2 psi ABOVE the 18-head lines (51.27 vs 51.06 / 51.03) instead of ~0.9
+  below — one head-equivalent isn't flowing. Stable all week and in the
+  08-24 spot checks (sd 0.06, not noise). **Use 18 effective heads for C3**
+  in any feedforward/expected-pressure math. If curious: walk C3 on a
+  Friday run and see which head isn't throwing.
 - C-field line swap = ~19-22 psi for 1.5-2 min while the big line fills
   (3 consecutive swaps 08-29/30/31) — normal, NOT a suction fault. Home
   lawn's 07:00 run sags the pump ~1.5-4 psi for ~75 min (same pump).
