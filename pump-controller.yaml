@@ -351,26 +351,6 @@ sensor:
     update_interval: 60s
     entity_category: diagnostic
 
-  # ---- Zone start stamps ----
-  # Stamped from the RTC-backed clock every time a zone relay energizes
-  # (any path: schedule, Run Zone, Next, Run All). device_class timestamp =
-  # HA shows it as a datetime / "N minutes ago". Not restored across a
-  # reboot (empty until the next start); the recorder keeps the history.
-  - platform: template
-    name: "RTC Zone 1"
-    id: rtc_zone1
-    device_class: timestamp
-    icon: "mdi:clock-start"
-    accuracy_decimals: 0
-    update_interval: never
-  - platform: template
-    name: "RTC Zone 2"
-    id: rtc_zone2
-    device_class: timestamp
-    icon: "mdi:clock-start"
-    accuracy_decimals: 0
-    update_interval: never
-
 text_sensor:
   - platform: template
     name: "RTC Time At Boot"
@@ -386,8 +366,29 @@ text_sensor:
       name: "WiFi Network"
       entity_category: diagnostic
 
+  # ---- Zone start stamps ----
+  # Stamped from the RTC-backed clock every time a zone relay energizes
+  # (any path: schedule, Run Zone, Next, Run All). device_class timestamp =
+  # HA shows it as a datetime / "N minutes ago". A text sensor (ISO-8601
+  # UTC string) rather than a float sensor: float32 can only hold today's
+  # epoch to the nearest 128 s, which put the stamps up to a minute off.
+  # Not restored across a
+  # reboot (empty until the next start); the recorder keeps the history.
+  - platform: template
+    name: "RTC Zone 1"
+    id: rtc_zone1
+    device_class: timestamp
+    icon: "mdi:clock-start"
+    update_interval: never
+  - platform: template
+    name: "RTC Zone 2"
+    id: rtc_zone2
+    device_class: timestamp
+    icon: "mdi:clock-start"
+    update_interval: never
+
 script:
-  # Publish "now" from the RTC-backed clock onto the zone's RTC sensor.
+  # Publish "now" from the RTC-backed clock onto the zone's RTC text sensor.
   # Skipped if the clock isn't valid yet (no RTC, no SNTP) rather than
   # publishing 1970.
   - id: rtc_stamp
@@ -398,7 +399,10 @@ script:
       - lambda: |-
           auto t = id(rtc_time).now();
           if (!t.is_valid()) { ESP_LOGW("rtc", "zone %d start: clock not valid, no stamp", zone); return; }
-          float ts = (float) t.timestamp;
+          // ISO-8601 in UTC (HA converts to local). Built from the epoch so the
+          // string is exact to the second regardless of the node's TZ setting.
+          char ts[24];
+          ESPTime::from_epoch_utc(t.timestamp).strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ");
           switch (zone) {
             case 1: id(rtc_zone1).publish_state(ts); break;
             case 2: id(rtc_zone2).publish_state(ts); break;
