@@ -222,8 +222,11 @@ doesn't on DD-WRT) — use the device IP or the router's DNS name
 **Flashing rule: no zone running.** This is a PLC driving real equipment
 (a pump is ~$10K), not a website — the rule is deliberately simple and only
 rests on what has been verified. Before any `./upload.sh`, check the
-dashboard: no lawn zone running (pump lawn 19:00; home lawn 07:00 / 19:00
-on its days), and once Field A is automated, no Field A zone either. Wait
+dashboard: no lawn zone running. Schedule (since 2026-08-31): one
+controller per day, both slots — house lawn Sun/Mon/Wed/Fri, pump lawn
+Sat/Tue/Thu, each at 07:00 and 19:00 (runs ~75 min) — so avoid ~07:00-08:30
+and ~19:00-20:30 every day. Once Field A is automated, no Field A zone
+either. Wait
 for the cycle to finish. Also don't flash within a minute of toggling any
 relay switch — restored states are flushed to flash on a 60 s interval.
 
