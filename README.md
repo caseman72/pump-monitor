@@ -219,6 +219,15 @@ not check node names. Note: mDNS may not resolve on your network (it
 doesn't on DD-WRT) — use the device IP or the router's DNS name
 (`pump-monitor`).
 
+**Never flash a controller while a zone is running.** OTA reboots the board:
+the zone relay drops mid-cycle, the sprinkler cycle is lost, and the elapsed
+timers and the RTC Zone stamp for that start go with it (a stamp only
+reaches flash up to 60 s after the start). Check the dashboard for a running
+zone — pump lawn 19:00, home lawn 07:00 / 19:00 on its days — and wait for
+the cycle to finish. (pump-monitor is the exception: the valves and the ICE
+relay hold their state across a reboot, so its OTA only costs a few seconds
+of pressure samples.)
+
 If Wi-Fi is unreachable the device broadcasts a fallback hotspot
 (`Pump-Monitor`, password = `AP_PASSWORD`) — connect and reach it at
 192.168.4.1 to recover or OTA.
