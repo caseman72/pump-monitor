@@ -892,8 +892,13 @@ screenshot reading needed for future line runs.
       flush), Restart from HA → stays energized; repeat with a real
       `./upload.sh` → stays energized; then the failure case: switch ON and
       flash within 10 s → expect it to drop (restored state not flushed).
-      Until this is done the flashing rule is "no zone running", Field A
-      lines included (README "Building & uploading"). The 2026-08-23 check
+      Then the live test (Casey, 2026-08-30): OTA-flash with a zone actually
+      running **and a flow path that cannot close** — both CVs open, or a
+      smaller manual line also open — so if the relay does drop the pump
+      sees a pressure step, not a dead head. Watch the zone's solenoid and
+      the pressure chart through the reboot; a clean trace = the rule can be
+      relaxed for that board. Until this is done the flashing rule is "no
+      zone running", Field A lines included (README "Building & uploading"). The 2026-08-23 check
       was the ICE relay on pump-monitor — same expander/override, inferred
       for this board, not measured.
 
