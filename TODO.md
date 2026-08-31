@@ -470,7 +470,8 @@ Design notes:
       within ±0.13 psi. Implies ~4.9 GPM/head via the pump curve
       (0.001165·4.9² ≈ 0.0280). Inverse: x = √((60.2 − y)/0.02794).
       - Typical error ±0.7 psi across all 18 measured points; known
-        outliers: **C4 runs ~1.8 high for 21 heads** ("acts like a 20.3"),
+        outliers: **C4 runs ~1.8 high for 21 heads** (inverts to 19.4 —
+        "acts like a 19.5"),
         the 08-26 A-field 18-head run was 1.4 low, and identical head
         counts in different fields differ by up to 1.5 psi (the two
         14-head sets) — head count gets you close, field routing sets the
