@@ -1006,6 +1006,14 @@ screenshot reading needed for future line runs.
         (3) season-over-season wear = more kW at the same psi/flow — turns
         the 51-62 % efficiency estimate into a measurement and calibrates
         the Sense history (~4.5-4.7 kW); (4) season cost from the meter.
+      - **Schedule F**: the circuit is 100 % pump, so every kWh is farm
+        utility expense. HA side: summed A+B energy → utility_meter daily /
+        monthly / **yearly (calendar year = tax year)**; monthly line
+        appended to `/config/pump_energy_log.csv` on the 1st as the audit
+        trail. Two rates as input_numbers: energy-line rate (decisions,
+        $/h) and blended bill $/kWh (expense figure). Rate to confirm on
+        the bill — candidates 8.333 ¢ (Casey), 8.66 ¢ (used for the
+        2022-24 estimates above), 11 ¢ (Sense, probably blended).
       - The Gen3's 2 A relay output is NOT for the pump loop — ICE REL5/6
         stays the only pump-off path (don't add machinery).
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
