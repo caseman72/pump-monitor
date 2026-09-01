@@ -1006,10 +1006,26 @@ screenshot reading needed for future line runs.
 
 ## 5. Calibration & sensors
 
-- [ ] Pump power monitoring: a CT on the pump feed so HA sees motor load
-      directly — Shelly EM / Emporia on that circuit, or a 0–10 V CT
-      transducer into the PLC's spare AI2. Gives the staged controller a
-      real motor-load floor instead of inferring it from pressure.
+- [~] Pump power monitoring — **ORDERED 2026-08-31: Shelly EM Gen3 50A
+      + 2× Shelly 80A CTs.** HA sees motor load directly (native Shelly
+      integration, local). Gives the staged controller a real motor-load
+      floor instead of inferring it from pressure.
+      - Wiring (240 V single-phase pump, US split-phase): power the EM
+        from **L1→N (120 V)**, one 80A CT per leg (ch A = L1, ch B = L2),
+        CT arrows toward the load. Each channel reads I×120 V, **A + B =
+        pump kW** (powered L1→L2 it would double-count). 80A CTs: ~25 A
+        running, LRA inrush ~6× at start — no saturation in the working
+        range. A vs B should match within a few %; divergence = a leg /
+        contact going bad.
+      - Derive: (1) kW → independent flow estimate, cross-check vs the
+        psi-from-heads equation (C lines ~90 GPM vs A4+B1 ~65 vs recycle-
+        only ~25 should separate cleanly); (2) dead-head signature (shutoff
+        power ≈ half of running) and cavitation (current flicker);
+        (3) season-over-season wear = more kW at the same psi/flow — turns
+        the 51-62 % efficiency estimate into a measurement and calibrates
+        the Sense history (~4.5-4.7 kW); (4) season cost from the meter.
+      - The Gen3's 2 A relay output is NOT for the pump loop — ICE REL5/6
+        stays the only pump-off path (don't add machinery).
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
 - [ ] Measure Valve 2's Full Travel Time after install
 - [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
