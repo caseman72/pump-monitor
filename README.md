@@ -25,7 +25,8 @@ an incremental **Pulse Position** for fine trims.
 | Pump | Goulds 3656 S-Group 1½ × 2 – 6, 5-15/16" impeller, WEG 5 HP 1-ph 3490 RPM. Pond suction is flooded by only **~1 ft** (the pump sits 1 ft below the pond surface; the intake is 10 ft below the pump but intake depth doesn't add head — the free surface does), so the gauge reads curve-head **+ only ~0.4 psi**. Published curve at the gauge: **shutoff ~65 psi**, best efficiency (~73%) **~52 psi @ ~100 GPM**. Pump off should read ~0.4 psi (≈0). **Caveat: measured efficiency is ~49% (see TODO), so the real curve likely sits below published — measure actual dead-head before trusting these.** 4" irrigation main (150 psi rated), 1¼–1½" lawn lines |
 
 The actuators have internal end-stop limit switches, so driving past full
-travel is harmless — the firmware exploits this to re-home on every move.
+travel is harmless — the firmware exploits this: open and close drive onto
+the end-stops to resync the dead-reckoned position.
 
 ![Enclosure build](docs/enclosure.jpeg)
 
@@ -37,25 +38,7 @@ cable glands for the field runs.*
 ## How positioning works
 
 The valves have no position feedback; position is dead-reckoned by motor
-run-time. To keep that accurate:
-
-1. **Every move re-homes at FULL OPEN** (drive open for travel + 0.25 s;
-   the end-stop absorbs the overrun). The pump never gets dead-headed
-   mid-move — the transient is extra flow, never zero flow.
-2. The firmware then **close-pulses down to the target** using the flow
-   table. Every position is approached from the same direction, so gear
-   backlash cancels.
-3. **Position 0% is the exception**: it drives the ball hard onto the seat
-   (full close). *Only command 0% with the pump off.*
-
-A 20 s dead-man timer forces the valve relays off if anything (including a
-lost Wi-Fi/HA connection) leaves one energized.
-
-### Pulse Position (incremental mode)
-
-Each valve also has a **Pulse Position** number (0–16) for small trims
-without the full re-home cycle — the primitive for pressure control
-("pressure high → +, pressure low → −"). Counter semantics:
+run-time as a **pulse counter 0–16** (17 steps):
 
 | Counter | Ball position |
 |---:|---|
@@ -64,15 +47,30 @@ without the full re-home cycle — the primitive for pressure control
 | 2 … 15 | +0.2 s of open travel per count |
 | 16 | full open (= full travel) |
 
-The **Pulse +** / **Pulse −** buttons step the counter by one (automations:
-`button.press`); each press advances the last *requested* target, so rapid
-presses accumulate correctly. The **Pulse Target** number jumps straight to
-N. Either way the valve moves from its current counter to the target in one
-continuous pulse (open or close).
-Pulse moves are dead-reckoned (no re-home) so error accumulates; any move
-on the flow slider re-homes and resyncs the counter, and pulse moves update
-the valve's reported flow %. Counter and position survive reboots (the ball
-doesn't move when the ESP restarts).
+Every move is **one continuous drive from the current counter to the
+target**, open or close, with no re-home: 0 → 8 (the slider's 50%) is
+0.55 + 7 × 0.2 = 1.95 s of open drive; 8 → 0 is 1.4 s of close drive plus
+the 0.55 s breakaway and the 0.25 s homing margin. **Open (16) and close
+(0) drive onto an end-stop** (travel + 0.25 s; the internal limit switch
+absorbs the overrun) and reset the counter — that is how dead-reckoning
+drift is cleared. Counter and position survive reboots (the ball doesn't
+move when the ESP restarts).
+
+Three controls drive the same counter:
+
+- the **valve entity's position slider** — the counter as a percentage
+  (50% = pulse 8); the open / close buttons go to 16 / 0
+- the **Pulse +** / **Pulse −** buttons — step the counter by one
+  (automations: `button.press`). Each press advances the last *requested*
+  target, so rapid presses accumulate correctly while a move is in flight
+- the **Pulse Target** number — jumps straight to N
+
+**Position 0 drives the ball hard onto the seat.** With a single recycle
+valve, only do that with the pump off. In the pressure-control layout
+(CV1 parked open at ~5 GPM, CV2 on the loop) CV2 closing fully is fine.
+
+A 20 s dead-man timer forces the valve relays off if anything (including a
+lost Wi-Fi/HA connection) leaves one energized.
 
 **Reboot behaviour.** All relays are commanded OFF at boot and nothing moves
 the ball. Reported positions are seeded at boot from restored globals,
@@ -95,46 +93,38 @@ Everything scales from it at runtime — swapping in a replacement valve of the
 same model only requires measuring its travel (seat test: drive closed onto
 the seat, then time open-to-endstop) and typing the number into HA. No reflash.
 
-## Flow calibration
+## Flow calibration (reference — not used by the firmware)
 
-On a ~60 psi static supply (city faucet ≈ the irrigation pump), the installed
-flow curve of these ball valves is extremely nonlinear: **~10% of ball travel
-already passes over half of max flow, and everything above ~35% travel is
-plateau**. All real control authority lives in the first quarter of rotation.
+The firmware positions purely by pulse count (position 50% = half the
+travel, not half the flow). This table is kept because it says **where on
+the counter the flow actually lives**. On a ~60 psi static supply (city
+faucet ≈ the irrigation pump) the installed flow curve of these ball valves
+is extremely nonlinear: ~10% of ball travel already passes over half of
+max flow, and everything above ~35% travel is plateau. Bucket test
+2026-08-17 (30 s holds, constant-transient protocol), converted to pulse
+counts at 3.55 s travel:
 
-The firmware therefore maps commanded flow % → ball position through a
-measured table (`VM_OPEN_FRAC` in `valve_math.h`), built with a bucket test
-(2026-08-17, 30 s holds, constant-transient protocol):
+| Flow % | Ball position (fraction of travel from seat) | ≈ pulse |
+|---:|---:|---:|
+| 0 (water-zero) | 0.141 | 1 |
+| 5 | 0.197 | 2 |
+| 10 | 0.225 | 2–3 |
+| 15 | 0.254 | 3 |
+| 25 | 0.275 | 3 |
+| 50 | 0.34 *(provisional)* | 4 |
+| 80 | 0.43 *(provisional)* | 6 |
+| 95 | 0.53 *(provisional)* | 8 |
 
-| Flow % | Ball position (fraction of travel from seat) |
-|---:|---:|
-| 0 (water-zero) | 0.141 |
-| 5 | 0.197 |
-| 10 | 0.225 |
-| 15 | 0.254 |
-| 25 | 0.275 |
-| 50 | 0.34 *(provisional)* |
-| 80 | 0.43 *(provisional)* |
-| 95 | 0.53 *(provisional)* |
-
-Anchors ≤25% are solid (trickle-sweep measurements). The 50–95% anchors are
-converted from an earlier sweep with a contaminated blank — re-verify with
-clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
-~0.14 of travel (water-zero); the mechanical seat is further (seat-zero).
-
-### Calibration procedure (for a new valve or supply)
-
-1. Measure **Full Travel Time** (seat test) and set the HA number.
-2. **Blank run**: command position 0, run the bucket protocol — the weight
-   is tare + transient water (the constant to subtract from every trial).
-3. Sweep positions with fixed hold times, weigh the bucket each run.
-   Flow fraction = (weight − blank) / (max-flow weight − blank).
-4. Update the `VM_OPEN_FRAC` anchors in `valve_math.h`.
+So all real control authority is in pulses 1–8; pulses 9–16 add almost no
+flow. Anchors ≤25% are solid (trickle-sweep measurements); the 50–95%
+anchors came from a sweep with a contaminated blank. Note the valve has
+*two* zeros: water stops at ~0.14 of travel (water-zero, pulse 1); the
+mechanical seat is further (seat-zero, pulse 0).
 
 ## Home Assistant entities
 
-- **Valve 1 / Valve 2** — native valve entities: position slider (= flow %),
-  open / close / stop buttons
+- **Valve 1 / Valve 2** — native valve entities: position slider (= pulse
+  counter / 16), open / close / stop buttons
 - **Valve N Pulse Position** — integer sensor, the 0–16 pulse counter
   (see above); **Valve N Pulse +** / **Pulse −** buttons step it, and the
   **Valve N Pulse Target** number (config category) jumps straight to N
@@ -202,16 +192,19 @@ clean bucket runs (see TODOs). Note the valve has *two* zeros: water stops at
 
 ### Pressure control (PID) — branch `pid`, not yet flashed
 
-ESPHome's `climate: pid` drives the recycle valves through the pulse
-primitive to hold pump pressure *under* a setpoint: CV1 opens 0–100 % first,
-then CV2. Design, reachable-setpoint table and the tuning log are in
+ESPHome's `climate: pid` drives **CV2 only** through the pulse primitive to
+hold pump pressure *under* a setpoint. CV1 is parked by hand at the ~5 GPM
+point and left there as the pump's guaranteed flow path: if an automated
+zone valve fails closed, CV1 keeps the pump from cooking while CV2 pulls
+the dead-head pressure (~60 psi) down to the setpoint. Design,
+reachable-setpoint table and the tuning log are in
 [`PID-PLAN.md`](PID-PLAN.md).
 
 - **Pressure Setpoint** (psi, default 55) and **Pressure Control** (master
-  switch, default OFF — OFF parks both valves at pulse 1, water-zero)
+  switch, default OFF — OFF closes CV2 to pulse 0; CV1 is never touched)
 - **PID Autotune** / **PID Reset Integral** buttons; **PID Kp / Ki / Kd**
   numbers to try gains live (setting one pushes all three)
-- **Recycle Output** (0–200 %, the combined command) and the loop
+- **Recycle Output** (0–100 %, the CV2 command = pulse / 16) and the loop
   internals — PID Result / Error / P / I / D Term, Kp / Ki / Kd Active
 
 ## Building & uploading
@@ -279,8 +272,7 @@ See [TODO.md](TODO.md) — including the staged pressure-response design
 ## Repo files
 
 - `pump-monitor.yaml` — production firmware (two valves, ICE relay, pressure)
-- `valve_math.h` — flow↔position table and pulse-counter math shared by
-  both valves and both positioning modes
+- `valve_math.h` — pulse-counter math shared by both valves
 - `components/pca9554/` — local override of ESPHome's expander driver that
   preserves relay states across reboot/OTA (keeps the ICE loop closed)
 - `pump-controller.yaml` — 2nd C6/Canaduino board: the 2 lawn zones as a native ESPHome `sprinkler:` controller (valve_open_delay, Next/Run-Zone buttons, elapsed/remaining timers), Field A lines as plain relay switches for a future coordinating "brain", DS3231 RTC as a time source, `RTC Zone N` timestamp sensors stamped at every zone start

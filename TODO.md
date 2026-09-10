@@ -70,8 +70,9 @@ it earn the right to run Field A's automated zones un-manned.
 ## 1. Staged pressure response (the real control system) — NOT YET
 
 > **PID controller — IN PROGRESS 2026-08-27, branch `pid`, see
-> `PID-PLAN.md`.** ESPHome `climate: pid` + autotune driving CV1 then CV2
-> through the pulse primitive; setpoint is an HA number (default 55).
+> `PID-PLAN.md`.** ESPHome `climate: pid` + autotune driving CV2 through
+> the pulse primitive (CV1 parked open at ~5 GPM by hand, 2026-09-10);
+> setpoint is an HA number (default 55).
 > Tuning runs on the 12/14-head lines first (SP must be reachable — 50 on
 > 7 heads is not, floor ~57). Not flashed yet.
 
@@ -1006,10 +1007,29 @@ screenshot reading needed for future line runs.
 
 ## 5. Calibration & sensors
 
-- [~] Pump power monitoring — **ORDERED 2026-08-31: Shelly EM Gen3 50A
-      + 2× Shelly 80A CTs.** HA sees motor load directly (native Shelly
-      integration, local). Gives the staged controller a real motor-load
-      floor instead of inferring it from pressure.
+- [~] Pump power monitoring — **INSTALLED 2026-09-06: Shelly EM Gen3 50A
+      + 2× Shelly 80A CTs** (ordered 08-31). HA sees motor load directly
+      (native Shelly integration, local). Gives the staged controller a
+      real motor-load floor instead of inferring it from pressure.
+      - **⚠️ Raw Shelly readings are 1.5× HIGH — correct in HA, not the
+        app.** The Gen3 50A firmware only offers a 50A CT type; the 80A
+        CTs (needed to get two legs) put out more signal per amp than the
+        50A clamp it expects. Wired as planned (L1→N power, 120.5 V, one
+        80A CT per leg) — legs match to 0.1 %, PF 0.93 = nameplate, so the
+        wiring/phase reference is right; only the magnitude is off. Raw
+        32.3-32.5 A / 3,644 W per leg vs three independent sources at
+        ~20-21 A: the electrician's clamp when the leads went to 10 AWG,
+        the 2024 Sense plateaus (4.4-4.8 kW), and the pump curve. Ratio
+        1.5 = 32.3/21.5 (line-4 Sense 4.81 kW). **Correction factor =
+        50/80 on current, power, VA, and energy** (voltage and PF are
+        unaffected). Corrected: **20.2 A, 4,517 W** on an 18-head line ≈
+        88 % of the 4.9 kW nameplate. HA templates `Pump Amps` (leg 1 ×
+        50/80 — one current through both legs, never sum), `Pump Power`
+        and `Pump Energy` (A + B, × 50/80); feed the Schedule F utility
+        meters from these, never the raw entities. Side effect: the input
+        clips at ~33 A true instead of 50, so start inrush flat-tops —
+        harmless for monitoring. Factor is inferred from the cross-checks;
+        one clamp-meter reading beside the Shelly's would make it exact.
       - Wiring (240 V single-phase pump, US split-phase): power the EM
         from **L1→N (120 V)**, one 80A CT per leg (ch A = L1, ch B = L2),
         CT arrows toward the load. Each channel reads I×120 V, **A + B =

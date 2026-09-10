@@ -6,22 +6,15 @@
 #   Valve 1: REL1 (PCA9557 IO1) = close drive, REL2 (IO2) = open drive
 #   Valve 2: REL3 (PCA9557 IO3) = close drive, REL4 (IO4) = open drive
 #
-# Each valve has TWO positioning modes that stay in sync with each other:
-#
-#  1. `valve` entity (position slider 0-100% = calibrated FLOW %, not
-#     rotation). Every move re-homes at FULL OPEN then close-pulses down to
-#     the target - never dead-heads the pump mid-move (transient is extra
-#     flow, never zero). Position 0% drives the ball onto the seat: only
-#     command 0% with the pump off.
-#
-#  2. "Pulse Position" number (0-16): incremental open/close pulses with no
-#     re-home, for small trims (pressure control: + + + / - - -). Counter
-#     0 = seated, 1 = breakaway pulse (T - 3.0 s, ~water-zero), then +0.2 s
-#     of open travel per count, 16 = full open. Dead-reckoned - drift
-#     accumulates; any flow-slider move re-homes and resyncs the counter.
-#
-# Flow<->position math lives in valve_math.h (OPEN_FRAC table measured
-# 2026-08-17 - see README.md for the calibration procedure and data).
+# Position is a pulse counter 0-16 (17 steps), dead-reckoned by motor
+# run-time: 0 = seated, 1 = breakaway pulse (T - 3.0 s, ~water-zero), then
+# +0.2 s of open travel per count, 16 = full open. Every move is ONE
+# continuous drive from the current counter to the target (no re-home);
+# open (16) and close (0) add the homing margin and land on an end-stop,
+# which resyncs the counter. The `valve` entity's position slider is the
+# same counter as a percentage (50% = pulse 8 = 0.55 + 7 x 0.2 = 1.95 s
+# from the seat); the "Pulse Position" number and Pulse +/- buttons are
+# the same counter as an integer. Pulse math lives in valve_math.h.
 #
 # Board port map ("ESP32 PLC 100 V1_SCH.pdf"):
 #   Relays Q1-Q6 via PCA9557 I2C expander @ 0x1A -> ULN2003 (IO1..IO6)
@@ -29,9 +22,7 @@
 #   AI:  A1=GPIO0 A2=GPIO1 A3=GPIO2 A4=GPIO3 (0-10V, ~3:1 divider to 3.3 V)
 #
 # TODO: DS18B20 temperature like revel-monitor (one_wire on a spare GPIO)
-# TODO: measure Valve 2's Full Travel Time (seat test) after install;
-#       flow fractions assume same valve model as Valve 1
-# TODO: re-verify flow fractions >25% with clean-blank bucket runs
+# TODO: measure Valve 2's Full Travel Time (seat test) after install
 # Pressure: calibrated to the transducer spec (1-5 V = 0-100 psi). The dial
 #       gauge read ~8 psi higher; the transducer is trusted - absolute psi is
 #       only a reference, the trace (sprinkler zones, line changes) is what
@@ -47,6 +38,11 @@ substitutions:
 
   home_margin_s: "0.25"   # extra drive past full travel when homing either
                           # direction; the end-stop switch cuts the motor
+
+  # PID output ceiling in pulse counts: 100 % output = this pulse. Flow is
+  # plateau above ~pulse 8 (README flow table), so letting the loop wind
+  # up to 16 only buys a slow recovery from saturation. 10 chosen 2026-09-10.
+  pid_max_pulse: "10"
 
   # ICE relay polarity. "true": pump loop runs through the module's NO
   # contact, relay ENERGIZED = loop closed (every ESP reboot drops the loop
@@ -68,11 +64,11 @@ esphome:
       # a first boot with no saved valve state it reports RAM garbage
       # (clamped to 1.0 = "open") - which is what looked like "the valves
       # opened on reboot". The ball never moves at boot; only the report
-      # was wrong. v1_frac/v2_frac restore from flash (0 when never saved).
+      # was wrong. v1_pulse/v2_pulse restore from flash (0 when never saved).
       - lambda: |-
-          id(valve_1).position = vm_frac_to_flow(id(v1_frac)) / 100.0f;
+          id(valve_1).position = id(v1_pulse) / (float) VM_PULSE_MAX;
           id(valve_1).publish_state();
-          id(valve_2).position = vm_frac_to_flow(id(v2_frac)) / 100.0f;
+          id(valve_2).position = id(v2_pulse) / (float) VM_PULSE_MAX;
           id(valve_2).publish_state();
           id(v1_pulse_target) = id(v1_pulse);
           id(v2_pulse_target) = id(v2_pulse);
@@ -85,6 +81,22 @@ esphome:
       # HA-facing Pressure Setpoint / Pressure Control entities are the
       # source of truth - push them in so the two never disagree.
       - script.execute: pid_sync
+      # Gains: the PID Kp/Ki/Kd numbers restore from flash, the climate's
+      # control_parameters do not. If the numbers have never been set (all
+      # 0) mirror the compiled-in gains into them; otherwise apply the
+      # numbers. Either way HA shows what the loop runs.
+      - if:
+          condition:
+            lambda: 'return id(pid_kp).state <= 0.0f && id(pid_ki).state <= 0.0f && id(pid_kd).state <= 0.0f;'
+          then:
+            - lambda: |-
+                id(pid_kp).publish_state(id(pid_pressure).get_kp());
+                id(pid_ki).publish_state(id(pid_pressure).get_ki());
+                id(pid_kd).publish_state(id(pid_pressure).get_kd());
+                ESP_LOGI("pid", "numbers seeded from compiled gains: kp %.4f ki %.5f kd %.4f",
+                         id(pid_pressure).get_kp(), id(pid_pressure).get_ki(), id(pid_pressure).get_kd());
+          else:
+            - script.execute: pid_apply_gains
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -133,24 +145,7 @@ pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
     address: 0x1A
 
 globals:
-  # Flow-mode target (%) and the resulting ball position (fraction)
-  - id: v1_target
-    type: float
-    restore_value: no
-    initial_value: '0'
-  - id: v1_frac
-    type: float
-    restore_value: yes
-    initial_value: '0'
-  - id: v2_target
-    type: float
-    restore_value: no
-    initial_value: '0'
-  - id: v2_frac
-    type: float
-    restore_value: yes
-    initial_value: '0'
-  # Pulse-mode counters (0..16) - actual position, restored across reboots
+  # Pulse counters (0..16) - actual position, restored across reboots
   - id: v1_pulse
     type: int
     restore_value: yes
@@ -164,6 +159,18 @@ globals:
     restore_value: yes
     initial_value: '0'
   - id: v2_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # Target latched by the running pulse script. The queued script must
+  # finish the move it STARTED: reading vN_pulse_target again at the end
+  # stamps the counter with whatever was requested since (the PID queues
+  # targets faster than a 3 s close) and desyncs dead reckoning.
+  - id: v1_pulse_run
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_pulse_run
     type: int
     restore_value: no
     initial_value: '0'
@@ -401,9 +408,9 @@ switch:
     entity_category: config
 
   # ---- PID pressure control (see PID-PLAN.md) ----
-  # Master enable. ON = pid mode COOL (pressure above setpoint opens the
-  # recycle valves); OFF = pid mode OFF -> output 0 -> valves to the floor
-  # (pulse 1, water-zero). Default OFF; remembered across reboots.
+  # Master enable. ON = pid mode COOL (pressure above setpoint opens CV2);
+  # OFF = pid mode OFF -> output 0 -> CV2 closes (pulse 0). CV1 is never
+  # touched by the loop. Default OFF; remembered across reboots.
   - platform: template
     name: "Pressure Control"
     id: pressure_control
@@ -430,10 +437,11 @@ select:
       # (make-before-break inside ice_apply).
       - script.execute: ice_apply
 
-# Native HA valve entities. Position slider = calibrated flow %.
-# open = full open, close = SEAT (pump off only!), stop = relays off.
-# restore_mode RESTORE: the ball doesn't move on reboot, so the last
-# reported position is still true.
+# Native HA valve entities. Position slider = pulse counter / 16 (50% =
+# pulse 8). open = 16 (end-stop), close = 0 (SEAT - with a single valve,
+# pump off only!), stop = relays off. Every command is a plain pulse move
+# from the current counter. restore_mode RESTORE: the ball doesn't move on
+# reboot, so the last reported position is still true.
 valve:
   - platform: template
     name: "Valve 1"
@@ -444,21 +452,20 @@ valve:
     restore_mode: RESTORE
     open_action:
       - globals.set:
-          id: v1_target
-          value: '100.0'
-      - script.execute: v1_go
+          id: v1_pulse_target
+          value: !lambda 'return VM_PULSE_MAX;'
+      - script.execute: v1_pulse_go
     close_action:
       - globals.set:
-          id: v1_target
-          value: '0.0'
-      - script.execute: v1_go
+          id: v1_pulse_target
+          value: '0'
+      - script.execute: v1_pulse_go
     position_action:
       - globals.set:
-          id: v1_target
-          value: !lambda 'return pos * 100.0f;'
-      - script.execute: v1_go
+          id: v1_pulse_target
+          value: !lambda 'return (int) lroundf(pos * VM_PULSE_MAX);'
+      - script.execute: v1_pulse_go
     stop_action:
-      - script.stop: v1_go
       - script.stop: v1_pulse_go
       - switch.turn_off: v1_open
       - switch.turn_off: v1_close
@@ -472,21 +479,20 @@ valve:
     restore_mode: RESTORE
     open_action:
       - globals.set:
-          id: v2_target
-          value: '100.0'
-      - script.execute: v2_go
+          id: v2_pulse_target
+          value: !lambda 'return VM_PULSE_MAX;'
+      - script.execute: v2_pulse_go
     close_action:
       - globals.set:
-          id: v2_target
-          value: '0.0'
-      - script.execute: v2_go
+          id: v2_pulse_target
+          value: '0'
+      - script.execute: v2_pulse_go
     position_action:
       - globals.set:
-          id: v2_target
-          value: !lambda 'return pos * 100.0f;'
-      - script.execute: v2_go
+          id: v2_pulse_target
+          value: !lambda 'return (int) lroundf(pos * VM_PULSE_MAX);'
+      - script.execute: v2_pulse_go
     stop_action:
-      - script.stop: v2_go
       - script.stop: v2_pulse_go
       - switch.turn_off: v2_open
       - switch.turn_off: v2_close
@@ -496,8 +502,6 @@ button:
     name: "STOP All"
     icon: "mdi:alert-octagon"
     on_press:
-      - script.stop: v1_go
-      - script.stop: v2_go
       - script.stop: v1_pulse_go
       - script.stop: v2_pulse_go
       - switch.turn_off: v1_open
@@ -720,14 +724,17 @@ number:
     optimistic: true
     restore_value: true
     mode: box
+    # The template number fires set_action BEFORE it publishes the new
+    # state, so publish x first or the script reads the previous value.
     set_action:
+      - lambda: 'id(pressure_setpoint).publish_state(x);'
       - script.execute: pid_sync
 
-  # Live gain overrides for tuning without a reflash. Setting ANY one of
-  # them pushes all three, so enter all three from the autotune result.
-  # They are poke tools, not state: after a reboot the loop runs on the
-  # control_parameters in this file, and these numbers just show the last
-  # values typed. Bake proven gains into control_parameters.
+  # Live gains for tuning without a reflash. Setting ANY one of them
+  # pushes all three, so enter all three from the autotune result. They
+  # restore across reboots and are re-applied at boot, so they ARE the
+  # running gains; the control_parameters block below is only the
+  # first-boot default. Bake proven gains there too.
   - platform: template
     name: "PID Kp"
     id: pid_kp
@@ -740,6 +747,7 @@ number:
     restore_value: true
     mode: box
     set_action:
+      - lambda: 'id(pid_kp).publish_state(x);'
       - script.execute: pid_apply_gains
   - platform: template
     name: "PID Ki"
@@ -753,6 +761,7 @@ number:
     restore_value: true
     mode: box
     set_action:
+      - lambda: 'id(pid_ki).publish_state(x);'
       - script.execute: pid_apply_gains
   - platform: template
     name: "PID Kd"
@@ -766,161 +775,90 @@ number:
     restore_value: true
     mode: box
     set_action:
+      - lambda: 'id(pid_kd).publish_state(x);'
       - script.execute: pid_apply_gains
 
 script:
-  # ---- Flow-mode positioning (valve entity) ----
-  # Re-home at FULL OPEN (never dead-heads the pump), then close-pulse
-  # (1 - frac) x T down to the target. Every position is approached
-  # open->closing, so gear backlash is consistent. Resyncs the pulse
-  # counter when done.
-  - id: v1_go
-    mode: restart
-    then:
-      - script.stop: v1_pulse_go
-      - lambda: |-
-          float f = id(v1_target);
-          id(v1_frac) = (f <= 0.5f) ? 0.0f : ((f >= 99.5f) ? 1.0f : vm_flow_to_frac(f));
-      - switch.turn_off: v1_close
-      - switch.turn_on: v1_open
-      - delay: !lambda 'return (uint32_t)((id(v1_travel_time).state + ${home_margin_s}) * 1000.0f);'
-      - switch.turn_off: v1_open
-      - delay: 300ms
-      - if:
-          condition:
-            lambda: 'return id(v1_target) < 99.5f;'
-          then:
-            - switch.turn_on: v1_close
-            - delay: !lambda |-
-                float T = id(v1_travel_time).state;
-                if (id(v1_target) <= 0.5f) {
-                  // 0% must SEAL: full drive to the mechanical end-stop.
-                  uint32_t seat_ms = (uint32_t)((T + ${home_margin_s}) * 1000.0f);
-                  ESP_LOGI("valve1", "Position 0%%: full close (%u ms seat drive)", (unsigned) seat_ms);
-                  return seat_ms;
-                }
-                uint32_t ms = (uint32_t)((1.0f - id(v1_frac)) * T * 1000.0f);
-                ESP_LOGI("valve1", "Position %.0f%%: open-frac %.3f = %u ms close pulse from full open", id(v1_target), id(v1_frac), (unsigned) ms);
-                return ms;
-            - switch.turn_off: v1_close
-      - lambda: |-
-          id(v1_pulse) = vm_frac_to_pulse(id(v1_frac), id(v1_travel_time).state);
-          id(v1_pulse_target) = id(v1_pulse);
-          id(v1_pulse_number).publish_state(id(v1_pulse));
-          id(v1_pulse_count).publish_state(id(v1_pulse));
-
-  - id: v2_go
-    mode: restart
-    then:
-      - script.stop: v2_pulse_go
-      - lambda: |-
-          float f = id(v2_target);
-          id(v2_frac) = (f <= 0.5f) ? 0.0f : ((f >= 99.5f) ? 1.0f : vm_flow_to_frac(f));
-      - switch.turn_off: v2_close
-      - switch.turn_on: v2_open
-      - delay: !lambda 'return (uint32_t)((id(v2_travel_time).state + ${home_margin_s}) * 1000.0f);'
-      - switch.turn_off: v2_open
-      - delay: 300ms
-      - if:
-          condition:
-            lambda: 'return id(v2_target) < 99.5f;'
-          then:
-            - switch.turn_on: v2_close
-            - delay: !lambda |-
-                float T = id(v2_travel_time).state;
-                if (id(v2_target) <= 0.5f) {
-                  uint32_t seat_ms = (uint32_t)((T + ${home_margin_s}) * 1000.0f);
-                  ESP_LOGI("valve2", "Position 0%%: full close (%u ms seat drive)", (unsigned) seat_ms);
-                  return seat_ms;
-                }
-                uint32_t ms = (uint32_t)((1.0f - id(v2_frac)) * T * 1000.0f);
-                ESP_LOGI("valve2", "Position %.0f%%: open-frac %.3f = %u ms close pulse from full open", id(v2_target), id(v2_frac), (unsigned) ms);
-                return ms;
-            - switch.turn_off: v2_close
-      - lambda: |-
-          id(v2_pulse) = vm_frac_to_pulse(id(v2_frac), id(v2_travel_time).state);
-          id(v2_pulse_target) = id(v2_pulse);
-          id(v2_pulse_number).publish_state(id(v2_pulse));
-          id(v2_pulse_count).publish_state(id(v2_pulse));
-
-  # ---- Pulse-mode positioning (number entity) ----
+  # ---- Pulse positioning (valve entity, Pulse Target, Pulse +/-, PID) ----
   # Moves from the current counter to the target in one continuous pulse
   # (no re-home). Queued: rapid +/+/+ presses each run in order, and each
-  # run reads the latest target, so the valve ends where the last press
-  # asked. Going to 0 or 16 adds the homing margin to guarantee the stop.
-  # Resyncs the valve entity's reported flow % when done.
+  # run latches the latest target when it STARTS (vN_pulse_run), so the
+  # valve ends where the last press asked and the counter always matches
+  # the move actually made. Going to 0 or 16 adds the homing margin to guarantee the
+  # end-stop (that is what resyncs the dead-reckoned counter). Publishes
+  # the valve entity's position (counter / 16) when done.
   - id: v1_pulse_go
     mode: queued
     then:
+      - lambda: 'id(v1_pulse_run) = id(v1_pulse_target);'
       - if:
           condition:
-            lambda: 'return id(v1_pulse_target) > id(v1_pulse);'
+            lambda: 'return id(v1_pulse_run) > id(v1_pulse);'
           then:
             - switch.turn_off: v1_close
             - switch.turn_on: v1_open
             - delay: !lambda |-
                 float T = id(v1_travel_time).state;
-                float s = vm_pulse_to_open_s(id(v1_pulse_target), T) - vm_pulse_to_open_s(id(v1_pulse), T);
-                if (id(v1_pulse_target) >= VM_PULSE_MAX) s += ${home_margin_s};
-                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms open", id(v1_pulse), id(v1_pulse_target), s * 1000.0f);
+                float s = vm_pulse_to_open_s(id(v1_pulse_run), T) - vm_pulse_to_open_s(id(v1_pulse), T);
+                if (id(v1_pulse_run) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms open", id(v1_pulse), id(v1_pulse_run), s * 1000.0f);
                 return (uint32_t)(s * 1000.0f);
             - switch.turn_off: v1_open
       - if:
           condition:
-            lambda: 'return id(v1_pulse_target) < id(v1_pulse);'
+            lambda: 'return id(v1_pulse_run) < id(v1_pulse);'
           then:
             - switch.turn_off: v1_open
             - switch.turn_on: v1_close
             - delay: !lambda |-
                 float T = id(v1_travel_time).state;
-                float s = vm_pulse_to_open_s(id(v1_pulse), T) - vm_pulse_to_open_s(id(v1_pulse_target), T);
-                if (id(v1_pulse_target) <= 0) s += ${home_margin_s};
-                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms close", id(v1_pulse), id(v1_pulse_target), s * 1000.0f);
+                float s = vm_pulse_to_open_s(id(v1_pulse), T) - vm_pulse_to_open_s(id(v1_pulse_run), T);
+                if (id(v1_pulse_run) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms close", id(v1_pulse), id(v1_pulse_run), s * 1000.0f);
                 return (uint32_t)(s * 1000.0f);
             - switch.turn_off: v1_close
       - lambda: |-
-          id(v1_pulse) = id(v1_pulse_target);
+          id(v1_pulse) = id(v1_pulse_run);
           id(v1_pulse_number).publish_state(id(v1_pulse));
           id(v1_pulse_count).publish_state(id(v1_pulse));
-          id(v1_frac) = vm_pulse_to_frac(id(v1_pulse), id(v1_travel_time).state);
-          id(valve_1).position = vm_frac_to_flow(id(v1_frac)) / 100.0f;
+          id(valve_1).position = id(v1_pulse) / (float) VM_PULSE_MAX;
           id(valve_1).publish_state();
 
   - id: v2_pulse_go
     mode: queued
     then:
+      - lambda: 'id(v2_pulse_run) = id(v2_pulse_target);'
       - if:
           condition:
-            lambda: 'return id(v2_pulse_target) > id(v2_pulse);'
+            lambda: 'return id(v2_pulse_run) > id(v2_pulse);'
           then:
             - switch.turn_off: v2_close
             - switch.turn_on: v2_open
             - delay: !lambda |-
                 float T = id(v2_travel_time).state;
-                float s = vm_pulse_to_open_s(id(v2_pulse_target), T) - vm_pulse_to_open_s(id(v2_pulse), T);
-                if (id(v2_pulse_target) >= VM_PULSE_MAX) s += ${home_margin_s};
-                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms open", id(v2_pulse), id(v2_pulse_target), s * 1000.0f);
+                float s = vm_pulse_to_open_s(id(v2_pulse_run), T) - vm_pulse_to_open_s(id(v2_pulse), T);
+                if (id(v2_pulse_run) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms open", id(v2_pulse), id(v2_pulse_run), s * 1000.0f);
                 return (uint32_t)(s * 1000.0f);
             - switch.turn_off: v2_open
       - if:
           condition:
-            lambda: 'return id(v2_pulse_target) < id(v2_pulse);'
+            lambda: 'return id(v2_pulse_run) < id(v2_pulse);'
           then:
             - switch.turn_off: v2_open
             - switch.turn_on: v2_close
             - delay: !lambda |-
                 float T = id(v2_travel_time).state;
-                float s = vm_pulse_to_open_s(id(v2_pulse), T) - vm_pulse_to_open_s(id(v2_pulse_target), T);
-                if (id(v2_pulse_target) <= 0) s += ${home_margin_s};
-                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms close", id(v2_pulse), id(v2_pulse_target), s * 1000.0f);
+                float s = vm_pulse_to_open_s(id(v2_pulse), T) - vm_pulse_to_open_s(id(v2_pulse_run), T);
+                if (id(v2_pulse_run) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms close", id(v2_pulse), id(v2_pulse_run), s * 1000.0f);
                 return (uint32_t)(s * 1000.0f);
             - switch.turn_off: v2_close
       - lambda: |-
-          id(v2_pulse) = id(v2_pulse_target);
+          id(v2_pulse) = id(v2_pulse_run);
           id(v2_pulse_number).publish_state(id(v2_pulse));
           id(v2_pulse_count).publish_state(id(v2_pulse));
-          id(v2_frac) = vm_pulse_to_frac(id(v2_pulse), id(v2_travel_time).state);
-          id(valve_2).position = vm_frac_to_flow(id(v2_frac)) / 100.0f;
+          id(valve_2).position = id(v2_pulse) / (float) VM_PULSE_MAX;
           id(valve_2).publish_state();
 
   # Drive the ICE relay to the current loop state. Loop is CLOSED (pump may
@@ -982,9 +920,9 @@ script:
           kp: !lambda 'return id(pid_kp).state;'
           ki: !lambda 'return id(pid_ki).state;'
           kd: !lambda 'return id(pid_kd).state;'
-      - logger.log:
-          tag: pid
-          format: "gains applied from HA numbers"
+      - lambda: |-
+          ESP_LOGI("pid", "gains applied: kp %.4f ki %.5f kd %.4f",
+                   id(pid_kp).state, id(pid_ki).state, id(pid_kd).state);
 
 sensor:
   - platform: wifi_signal
@@ -1113,7 +1051,7 @@ sensor:
     id: pid_pv
     internal: true
 
-  # Combined recycle command, 0..200 %: CV1's flow % plus CV2's.
+  # The loop's CV2 command, 0..100 % (= pulse target / 16).
   - platform: template
     name: "Recycle Output"
     id: recycle_pct
@@ -1224,45 +1162,35 @@ text_sensor:
       entity_category: diagnostic
 
 # ---- PID pressure control (see PID-PLAN.md) ----
-# The pid climate writes 0..1 here; this maps it onto the valves:
-#   state -> combined recycle flow 0..200 % (CV1 fills 0-100 first, then
-#   CV2) -> per-valve flow % -> ball fraction (measured flow table) ->
-#   nearest pulse counter -> the queued pulse script (no re-home).
-# Floor is pulse 1 = water-zero; pulse 0 / flow 0 % are seat drives and are
-# never commanded by the loop. Identical repeat targets are skipped so a
-# steady output doesn't stack queued moves.
+# The pid climate writes 0..1 here; this maps it onto CV2 ONLY:
+#   state -> pulse target 0..pid_max_pulse (0 = closed on the seat)
+#   -> the queued pulse script (no re-home).
+# CV1 is not part of the loop: it is parked by hand (valve slider / Pulse
+# Target) at the ~5 GPM point and stays open as the pump's guaranteed flow
+# path, so CV2 seating is harmless. Identical repeat targets are skipped
+# so a steady output doesn't stack queued moves.
 output:
   - platform: template
     type: float
     id: recycle_out
     write_action:
       - lambda: |-
-          float total = vm_clampf(state, 0.0f, 1.0f) * 200.0f;
-          auto want = [](float flow, float T) {
-            int p = vm_frac_to_pulse(vm_flow_to_frac(vm_clampf(flow, 0.0f, 100.0f)), T);
-            return p < 1 ? 1 : p;
-          };
-          int p1 = want(total,          id(v1_travel_time).state);
-          int p2 = want(total - 100.0f, id(v2_travel_time).state);
-          if (p1 != id(v1_pulse_target)) {
-            ESP_LOGI("pid", "output %.0f%% -> CV1 pulse %d", total, p1);
-            id(v1_pulse_target) = p1;
-            id(v1_pulse_go).execute();
-          }
+          float pct = vm_clampf(state, 0.0f, 1.0f) * 100.0f;
+          int p2 = (int) lroundf(pct / 100.0f * ${pid_max_pulse});
           if (p2 != id(v2_pulse_target)) {
-            ESP_LOGI("pid", "output %.0f%% -> CV2 pulse %d", total, p2);
+            ESP_LOGI("pid", "output %.0f%% -> CV2 pulse %d", pct, p2);
             id(v2_pulse_target) = p2;
             id(v2_pulse_go).execute();
           }
-          if (isnan(id(recycle_pct).state) || fabsf(id(recycle_pct).state - total) >= 0.5f)
-            id(recycle_pct).publish_state(total);
+          if (isnan(id(recycle_pct).state) || fabsf(id(recycle_pct).state - pct) >= 0.5f)
+            id(recycle_pct).publish_state(pct);
 
 # The loop engine. internal: HA converts climate temperatures C->F, so a
 # thermostat card would show "131 F" for 55 psi - control it through the
 # Pressure Setpoint / Pressure Control entities instead. cool_output only:
-# pressure ABOVE setpoint -> output -> valves open; below -> 0 -> floor.
-# Gains start at 0; PID Autotune fills them in (PID-PLAN.md), then bake
-# the proven values in here.
+# pressure ABOVE setpoint -> output -> CV2 opens; below -> 0 -> CV2 closed.
+# Gains from PID Autotune 2026-09-10 (12 heads, CV1 closed, SP 55; see the
+# PID-PLAN.md results log). Re-running autotune replaces them live.
 climate:
   - platform: pid
     id: pid_pressure
@@ -1278,18 +1206,21 @@ climate:
     # Samples arrive every 2 s (Pump Pressure publish rate), so 5 = ~10 s
     # of output averaging, 15 in the deadband = ~30 s.
     control_parameters:
-      kp: 0.0
-      ki: 0.0
-      kd: 0.0
+      kp: 0.492
+      ki: 0.0683
+      kd: 0.886
       output_averaging_samples: 5
       derivative_averaging_samples: 5
-    # Deadband in psi: sensor noise is +/-0.4, so +0.5 sits just outside
-    # it; the wider low side means "a bit under setpoint is fine, don't
-    # chase it" (the loop holds UNDER the setpoint). Inside the band P and
-    # D are off and I creeps at 5 %, so it can't hunt between pulse counts.
+    # Deadband in psi. Measured sensor noise is ~+/-0.1 (2026-09-10 log),
+    # and the whole control window on a 12-head line is only 1.6 psi, so
+    # the band is tight: +0.2 / -0.3 (a bit under setpoint is fine - the
+    # loop holds UNDER the setpoint). Inside the band P and D are off and
+    # I creeps at 5 %, so it can't hunt between pulse counts. The original
+    # +0.5 / -1.0 left the loop in-band almost always, crawling back from
+    # saturation at one pulse per ~50 s.
     deadband_parameters:
-      threshold_high: 0.5
-      threshold_low: -1.0
+      threshold_high: 0.2
+      threshold_low: -0.3
       kp_multiplier: 0.0
       ki_multiplier: 0.05
       kd_multiplier: 0.0
