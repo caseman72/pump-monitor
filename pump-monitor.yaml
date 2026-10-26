@@ -1,6 +1,16 @@
-# Pump Monitor - ESP32-C6-DevKitC in the Canaduino ESP32 PLC-100 V1
+# Pump Monitor v2 - ESP32-C6-DevKitC in the Canaduino ESP32 PLC-100 V1
+#
+# v2 (2026-10-08, flashed 2026-10-09) = the v1 firmware + the MINIMUM-FLOW
+# GUARD (PLAN.md section 4; search "GUARD"), minus the PID pressure loop
+# and the STOP All button. The loop is gone because both valves now park
+# at 25 % and stay there; its tuned gains (0.492 / 0.0683 / 0.886) and
+# history are in PLAN.md ("PID history"). The v1 firmware with the PID is
+# pump-monitor.yaml on branch `pid` - the way back.
+#   Flash: ./upload.sh pump-monitor.yaml
+#          (DRY_RUN=1 ./upload.sh pump-monitor.yaml prints the target ip)
+#
 # Irrigation pump node: two flow-control valves, pump ICE enable relay,
-# pressure sensor. Temperature (DS18B20) still TODO.
+# pressure sensor.
 #
 # Two motorized ball valves (same model, 1/2" SS, ~3.55 s travel):
 #   Valve 1: REL1 (PCA9557 IO1) = close drive, REL2 (IO2) = open drive
@@ -22,7 +32,8 @@
 #   AI:  A1=GPIO0 A2=GPIO1 A3=GPIO2 A4=GPIO3 (0-10V, ~3:1 divider to 3.3 V)
 #
 # TODO: DS18B20 temperature like revel-monitor (one_wire on a spare GPIO)
-# TODO: measure Valve 2's Full Travel Time (seat test) after install
+# Valve 2's Full Travel Time measured: 3.55 s, same as Valve 1 (Casey,
+# 2026-10-08).
 # Pressure: calibrated to the transducer spec (1-5 V = 0-100 psi). The dial
 #       gauge read ~8 psi higher; the transducer is trusted - absolute psi is
 #       only a reference, the trace (sprinkler zones, line changes) is what
@@ -39,16 +50,26 @@ substitutions:
   home_margin_s: "0.25"   # extra drive past full travel when homing either
                           # direction; the end-stop switch cuts the motor
 
-  # PID output ceiling in pulse counts: 100 % output = this pulse. Flow is
-  # plateau above ~pulse 8 (README flow table), so letting the loop wind
-  # up to 16 only buys a slow recovery from saturation. 10 chosen 2026-09-10.
-  pid_max_pulse: "10"
+  # Recycle flow per valve, GPM per % open. Bucket test 2026-10-01 with a
+  # Field A line running (~53 psi): 5 gal in 130 s at 25 % = 2.31 GPM.
+  # Measured up to 50 % total opening only; beyond that it is a guess.
+  recycle_gpm_per_pct: "0.0923"
+
+  # GUARD: the floor both recycle valves are held at or above while the
+  # guard is active. Pulse 4 = 25 % = 2.3 GPM per valve (bucket test
+  # 2026-10-01); one valve alone is still above the pump's thermal minimum.
+  guard_pulse: "4"
+  # The floor in force right now. Used at the ONE choke point (the pulse
+  # scripts), so nothing can command a valve below it.
+  guard_floor: "((id(guard_sw).state || id(reflex_active)) ? ${guard_pulse} : 0)"
 
   # ICE relay polarity. "true": pump loop runs through the module's NO
   # contact, relay ENERGIZED = loop closed (every ESP reboot drops the loop
-  # for ~1 s - on a latching starter that kills the pump). "false": loop
-  # through the NC contact, relay energized only to TRIP - reboots, crashes
-  # and a dead controller all leave the pump running. NC is recommended.
+  # for ~1 s - on a latching starter that kills the pump; the local
+  # components/pca9554 override removes that blip, bench-verified
+  # 2026-08-23). "false": loop through the NC contact, relay energized only
+  # to TRIP - reboots, crashes and a dead controller all leave the pump
+  # running. NO is the decision (2026-08-18, fail-stop; TODO.md section 2).
   ice_run_energized: "true"
 
 esphome:
@@ -77,26 +98,10 @@ esphome:
           id(v2_pulse_number).publish_state(id(v2_pulse));
           id(v2_pulse_count).publish_state(id(v2_pulse));
       - script.execute: ice_apply
-      # PID: the climate object restores its own last target/mode, but the
-      # HA-facing Pressure Setpoint / Pressure Control entities are the
-      # source of truth - push them in so the two never disagree.
-      - script.execute: pid_sync
-      # Gains: the PID Kp/Ki/Kd numbers restore from flash, the climate's
-      # control_parameters do not. If the numbers have never been set (all
-      # 0) mirror the compiled-in gains into them; otherwise apply the
-      # numbers. Either way HA shows what the loop runs.
-      - if:
-          condition:
-            lambda: 'return id(pid_kp).state <= 0.0f && id(pid_ki).state <= 0.0f && id(pid_kd).state <= 0.0f;'
-          then:
-            - lambda: |-
-                id(pid_kp).publish_state(id(pid_pressure).get_kp());
-                id(pid_ki).publish_state(id(pid_pressure).get_ki());
-                id(pid_kd).publish_state(id(pid_pressure).get_kd());
-                ESP_LOGI("pid", "numbers seeded from compiled gains: kp %.4f ki %.5f kd %.4f",
-                         id(pid_pressure).get_kp(), id(pid_pressure).get_ki(), id(pid_pressure).get_kd());
-          else:
-            - script.execute: pid_apply_gains
+      # GUARD: from here on the Guard switch acts, and if it restored ON
+      # the valves are brought up to the floor (no move if already there).
+      - lambda: 'id(boot_done) = true;'
+      - script.execute: guard_apply
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -164,7 +169,7 @@ globals:
     initial_value: '0'
   # Target latched by the running pulse script. The queued script must
   # finish the move it STARTED: reading vN_pulse_target again at the end
-  # stamps the counter with whatever was requested since (the PID queues
+  # stamps the counter with whatever was requested since (the old PID loop queued
   # targets faster than a 3 s close) and desyncs dead reckoning.
   - id: v1_pulse_run
     type: int
@@ -230,6 +235,20 @@ globals:
     restore_value: no
     initial_value: '0'
   - id: ice_run_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # GUARD state. reflex_active: pressure (or a dead transducer) says the
+  # pump has no field flow, so the floor is forced even with Guard OFF.
+  - id: boot_done
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: reflex_active
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: reflex_count
     type: int
     restore_value: no
     initial_value: '0'
@@ -407,22 +426,27 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     entity_category: config
 
-  # ---- PID pressure control (see PID-PLAN.md) ----
-  # Master enable. ON = pid mode COOL (pressure above setpoint opens CV2).
-  # OFF = hands off: the climate keeps writing 0 to its output every
-  # sample in mode OFF, so recycle_out ignores writes while this is OFF -
-  # CV2 stays where it is and can be driven by hand. CV1 is never touched
-  # by the loop. Default OFF; remembered across reboots.
+  # ---- GUARD (minimum-flow guard) ----
+  # ON  = both recycle valves are held at or above pulse ${guard_pulse}
+  #       (25 %). A "close" from HA or a Pulse - stops at the floor. This is the state for solenoid lines, small sets and
+  #       nothing running. Default, and remembered across reboots.
+  # OFF = no floor: the valves may be closed (a big manual line is open
+  #       and cannot shut by itself). Turning it OFF moves nothing. The
+  #       reflex (Guard Reflex Pressure) still forces the floor.
   - platform: template
-    name: "Pressure Control"
-    id: pressure_control
-    icon: "mdi:gauge-low"
+    name: "Guard"
+    id: guard_sw
+    icon: "mdi:shield-sync"
     optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
+    restore_mode: RESTORE_DEFAULT_ON
     on_turn_on:
-      - script.execute: pid_sync
-    on_turn_off:
-      - script.execute: pid_sync
+      # The switch restores during setup, before the valves are seeded -
+      # on_boot runs guard_apply itself once that is done.
+      - if:
+          condition:
+            lambda: 'return id(boot_done);'
+          then:
+            - script.execute: guard_apply
 
 select:
   - platform: template
@@ -500,17 +524,6 @@ valve:
       - switch.turn_off: v2_close
 
 button:
-  - platform: template
-    name: "STOP All"
-    icon: "mdi:alert-octagon"
-    on_press:
-      - script.stop: v1_pulse_go
-      - script.stop: v2_pulse_go
-      - switch.turn_off: v1_open
-      - switch.turn_off: v1_close
-      - switch.turn_off: v2_open
-      - switch.turn_off: v2_close
-
   # Pulse +/- : step the pulse counter by one. Each press advances the
   # LAST REQUESTED target (not the current position), so rapid presses
   # accumulate correctly while a move is still in flight (queued script).
@@ -575,27 +588,6 @@ button:
           id(ice_run_count) = 0;
           ESP_LOGW("ice", "Trip reset by user");
       - script.execute: ice_apply
-
-  # ---- PID pressure control ----
-  # Relay-method autotune: bangs the recycle output 0 <-> 100% and needs
-  # pressure to cross the setpoint BOTH ways, so pick a reachable SP
-  # first (PID-PLAN.md table). No cancel action exists - Restart aborts.
-  # noiseband 0.5 psi ~ the transducer's noise band.
-  - platform: template
-    name: "PID Autotune"
-    icon: "mdi:tune-vertical"
-    entity_category: config
-    on_press:
-      - climate.pid.autotune:
-          id: pid_pressure
-          noiseband: 0.5
-
-  - platform: template
-    name: "PID Reset Integral"
-    icon: "mdi:backup-restore"
-    entity_category: config
-    on_press:
-      - climate.pid.reset_integral_term: pid_pressure
 
   - platform: restart
     name: "Restart"
@@ -675,6 +667,28 @@ number:
     restore_value: true
     mode: box
 
+  # GUARD reflex threshold. Pressure at or above this for 3 s means the
+  # pump has lost its field flow -> both valves to the floor, Guard ON or
+  # not. Measured 2026-10-09: every Field A line runs 52.8-53.3 (54.7
+  # with the valves closed); no field flow with both valves at 25 % idles
+  # at 58.8, so it also reads tripped while idling on the guard (valves
+  # already there, nothing moves). 110 = never (the sensor clamps
+  # there). The air blow-out does not reach the transducer (it is behind
+  # the valve closed for it), so nothing needs changing for that.
+  - platform: template
+    name: "Guard Reflex Pressure"
+    id: reflex_psi
+    unit_of_measurement: "psi"
+    icon: "mdi:shield-alert"
+    entity_category: config
+    min_value: 45
+    max_value: 110
+    step: 0.5
+    initial_value: 57
+    optimistic: true
+    restore_value: true
+    mode: box
+
   # Pulse target (0..16): direct "jump to N" - pulses the valve from its
   # current counter to N in ONE continuous drive. The everyday controls are
   # the Pulse +/- buttons; this lives in the config category. (HA number
@@ -711,77 +725,8 @@ number:
           value: !lambda 'return (int) x;'
       - script.execute: v2_pulse_go
 
-  # ---- PID pressure control ----
-  # The setpoint the loop holds UNDER. Changeable any time, like a
-  # mini-split; the pid climate's target follows this number.
-  - platform: template
-    name: "Pressure Setpoint"
-    id: pressure_setpoint
-    unit_of_measurement: "psi"
-    icon: "mdi:gauge"
-    min_value: 30
-    max_value: 70
-    step: 0.5
-    initial_value: 55
-    optimistic: true
-    restore_value: true
-    mode: box
-    # The template number fires set_action BEFORE it publishes the new
-    # state, so publish x first or the script reads the previous value.
-    set_action:
-      - lambda: 'id(pressure_setpoint).publish_state(x);'
-      - script.execute: pid_sync
-
-  # Live gains for tuning without a reflash. Setting ANY one of them
-  # pushes all three, so enter all three from the autotune result. They
-  # restore across reboots and are re-applied at boot, so they ARE the
-  # running gains; the control_parameters block below is only the
-  # first-boot default. Bake proven gains there too.
-  - platform: template
-    name: "PID Kp"
-    id: pid_kp
-    entity_category: config
-    min_value: 0
-    max_value: 10
-    step: 0.001
-    initial_value: 0
-    optimistic: true
-    restore_value: true
-    mode: box
-    set_action:
-      - lambda: 'id(pid_kp).publish_state(x);'
-      - script.execute: pid_apply_gains
-  - platform: template
-    name: "PID Ki"
-    id: pid_ki
-    entity_category: config
-    min_value: 0
-    max_value: 10
-    step: 0.0001
-    initial_value: 0
-    optimistic: true
-    restore_value: true
-    mode: box
-    set_action:
-      - lambda: 'id(pid_ki).publish_state(x);'
-      - script.execute: pid_apply_gains
-  - platform: template
-    name: "PID Kd"
-    id: pid_kd
-    entity_category: config
-    min_value: 0
-    max_value: 100
-    step: 0.001
-    initial_value: 0
-    optimistic: true
-    restore_value: true
-    mode: box
-    set_action:
-      - lambda: 'id(pid_kd).publish_state(x);'
-      - script.execute: pid_apply_gains
-
 script:
-  # ---- Pulse positioning (valve entity, Pulse Target, Pulse +/-, PID) ----
+  # ---- Pulse positioning (valve entity, Pulse Target, Pulse +/-, guard) ----
   # Moves from the current counter to the target in one continuous pulse
   # (no re-home). Queued: rapid +/+/+ presses each run in order, and each
   # run latches the latest target when it STARTS (vN_pulse_run), so the
@@ -792,7 +737,18 @@ script:
   - id: v1_pulse_go
     mode: queued
     then:
-      - lambda: 'id(v1_pulse_run) = id(v1_pulse_target);'
+      # GUARD: let the caller finish first. The valve entity is optimistic
+      # and stamps the REQUESTED position after its action returns; without
+      # this a clamped "close" would end up reported as closed.
+      - delay: 20ms
+      # GUARD choke point: no target below the floor in force.
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v1_pulse_target) < f) {
+            ESP_LOGI("guard", "CV1 target %d held at floor %d", id(v1_pulse_target), f);
+            id(v1_pulse_target) = f;
+          }
+          id(v1_pulse_run) = id(v1_pulse_target);
       - if:
           condition:
             lambda: 'return id(v1_pulse_run) > id(v1_pulse);'
@@ -829,7 +785,18 @@ script:
   - id: v2_pulse_go
     mode: queued
     then:
-      - lambda: 'id(v2_pulse_run) = id(v2_pulse_target);'
+      # GUARD: let the caller finish first. The valve entity is optimistic
+      # and stamps the REQUESTED position after its action returns; without
+      # this a clamped "close" would end up reported as closed.
+      - delay: 20ms
+      # GUARD choke point: no target below the floor in force.
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v2_pulse_target) < f) {
+            ESP_LOGI("guard", "CV2 target %d held at floor %d", id(v2_pulse_target), f);
+            id(v2_pulse_target) = f;
+          }
+          id(v2_pulse_run) = id(v2_pulse_target);
       - if:
           condition:
             lambda: 'return id(v2_pulse_run) > id(v2_pulse);'
@@ -885,6 +852,16 @@ script:
           ESP_LOGI("ice", "loop %s (relay %s, %s)", loop_closed ? "CLOSED" : "OPEN",
                    energize ? "energized" : "released", use5 ? "REL5" : "REL6");
 
+  # GUARD: bring both valves up to the floor in force (no-op when the
+  # floor is 0 or they are already at/above it). Never closes anything.
+  - id: guard_apply
+    mode: restart
+    then:
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v1_pulse_target) < f) { id(v1_pulse_target) = f; id(v1_pulse_go).execute(); }
+          if (id(v2_pulse_target) < f) { id(v2_pulse_target) = f; id(v2_pulse_go).execute(); }
+
   # Dead-man: drops the valve relays 20 s after the last turn-on no matter
   # what (covers a lost HA/Wi-Fi connection mid-move). Harmless no-op if
   # the relays were already released. Does NOT touch the ICE relays.
@@ -900,31 +877,6 @@ script:
           level: WARN
           tag: valve
           format: "Safety timeout - valve relays forced off"
-
-  # ---- PID pressure control ----
-  # Push the HA-facing setpoint + enable switch into the pid climate.
-  - id: pid_sync
-    mode: restart
-    then:
-      - lambda: |-
-          auto call = id(pid_pressure).make_call();
-          call.set_target_temperature(id(pressure_setpoint).state);
-          call.set_mode(id(pressure_control).state ? climate::CLIMATE_MODE_COOL : climate::CLIMATE_MODE_OFF);
-          call.perform();
-          ESP_LOGI("pid", "sync: setpoint %.1f psi, control %s", id(pressure_setpoint).state,
-                   id(pressure_control).state ? "ON" : "OFF");
-
-  - id: pid_apply_gains
-    mode: restart
-    then:
-      - climate.pid.set_control_parameters:
-          id: pid_pressure
-          kp: !lambda 'return id(pid_kp).state;'
-          ki: !lambda 'return id(pid_ki).state;'
-          kd: !lambda 'return id(pid_kd).state;'
-      - lambda: |-
-          ESP_LOGI("pid", "gains applied: kp %.4f ki %.5f kd %.4f",
-                   id(pid_kp).state, id(pid_ki).state, id(pid_kd).state);
 
 sensor:
   - platform: wifi_signal
@@ -997,6 +949,25 @@ sensor:
     accuracy_decimals: 0
     update_interval: never
 
+  # Water going back to the pond through the two recycle valves, from the
+  # valve positions (not measured flow): ${recycle_gpm_per_pct} GPM per % open, per valve.
+  # 25 % + 25 % = 4.6 GPM. Zero while the pump is stopped.
+  - platform: template
+    name: "Recycle Flow"
+    id: recycle_gpm
+    unit_of_measurement: "gal/min"
+    device_class: volume_flow_rate
+    state_class: measurement
+    icon: "mdi:pipe-valve"
+    accuracy_decimals: 1
+    update_interval: 2s
+    lambda: |-
+      if (!id(pump_running).state) return 0.0f;
+      float pct = (id(v1_pulse) + id(v2_pulse)) * 100.0f / VM_PULSE_MAX;
+      return ${recycle_gpm_per_pct} * pct;
+    filters:
+      - delta: 0.05
+
   # ---- Per-valve motion diagnostics ----
   # Live stopwatch while a relay is energized (freezes at the final
   # value), plus the last pulse durations - verify positioning from HA
@@ -1045,66 +1016,6 @@ sensor:
     update_interval: never
     entity_category: diagnostic
 
-  # ---- PID pressure control ----
-  # Process variable for the pid climate: plain copy of Pump Pressure. The
-  # component only needs a number; it doesn't care that it isn't a temp.
-  - platform: copy
-    source_id: pump_pressure
-    id: pid_pv
-    internal: true
-
-  # The loop's CV2 command, 0..100 % (= pulse target / 16).
-  - platform: template
-    name: "Recycle Output"
-    id: recycle_pct
-    unit_of_measurement: "%"
-    icon: "mdi:valve"
-    accuracy_decimals: 0
-    update_interval: never
-
-  # The component's own loop internals, chartable in HA. RESULT is the raw
-  # pid output (-1..0 here: negative = "cooling" = opening recycle).
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID Result"
-    type: RESULT
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID Error"
-    type: ERROR
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID P Term"
-    type: PROPORTIONAL
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID I Term"
-    type: INTEGRAL
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID D Term"
-    type: DERIVATIVE
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID Kp Active"
-    type: KP
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID Ki Active"
-    type: KI
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_pressure
-    name: "PID Kd Active"
-    type: KD
-    entity_category: diagnostic
-
 binary_sensor:
   # The pump control loop as the pump sees it: ON = closed (pump enabled),
   # OFF = open (tripped). True for either NO or NC wiring.
@@ -1127,6 +1038,14 @@ binary_sensor:
     device_class: problem
     icon: "mdi:alert-octagon"
     lambda: 'return id(ice_tripped);'
+
+  # GUARD: ON while the reflex is forcing the floor.
+  - platform: template
+    name: "Guard Reflex"
+    id: reflex_sensor
+    device_class: problem
+    icon: "mdi:shield-alert"
+    lambda: 'return id(reflex_active);'
 
   - platform: template
     name: "ICE Trip Failed"
@@ -1162,74 +1081,6 @@ text_sensor:
       name: "WiFi Network"
       icon: "mdi:wifi-cog"
       entity_category: diagnostic
-
-# ---- PID pressure control (see PID-PLAN.md) ----
-# The pid climate writes 0..1 here; this maps it onto CV2 ONLY:
-#   state -> pulse target 0..pid_max_pulse (0 = closed on the seat)
-#   -> the queued pulse script (no re-home).
-# CV1 is not part of the loop: it is parked by hand (valve slider / Pulse
-# Target) at the ~5 GPM point and stays open as the pump's guaranteed flow
-# path, so CV2 seating is harmless. Identical repeat targets are skipped
-# so a steady output doesn't stack queued moves. Writes are ignored while
-# Pressure Control is OFF (the climate writes 0 every sample in mode OFF,
-# which would pin CV2 shut and override any manual move).
-output:
-  - platform: template
-    type: float
-    id: recycle_out
-    write_action:
-      - lambda: |-
-          if (!id(pressure_control).state) return;
-          float pct = vm_clampf(state, 0.0f, 1.0f) * 100.0f;
-          int p2 = (int) lroundf(pct / 100.0f * ${pid_max_pulse});
-          if (p2 != id(v2_pulse_target)) {
-            ESP_LOGI("pid", "output %.0f%% -> CV2 pulse %d", pct, p2);
-            id(v2_pulse_target) = p2;
-            id(v2_pulse_go).execute();
-          }
-          if (isnan(id(recycle_pct).state) || fabsf(id(recycle_pct).state - pct) >= 0.5f)
-            id(recycle_pct).publish_state(pct);
-
-# The loop engine. internal: HA converts climate temperatures C->F, so a
-# thermostat card would show "131 F" for 55 psi - control it through the
-# Pressure Setpoint / Pressure Control entities instead. cool_output only:
-# pressure ABOVE setpoint -> output -> CV2 opens; below -> 0 -> CV2 closed.
-# Gains from PID Autotune 2026-09-10 (12 heads, CV1 closed, SP 55; see the
-# PID-PLAN.md results log). Re-running autotune replaces them live.
-climate:
-  - platform: pid
-    id: pid_pressure
-    name: "Recycle PID"
-    internal: true
-    sensor: pid_pv
-    default_target_temperature: 55
-    cool_output: recycle_out
-    visual:
-      min_temperature: 0
-      max_temperature: 100
-      temperature_step: 0.5
-    # Samples arrive every 2 s (Pump Pressure publish rate), so 5 = ~10 s
-    # of output averaging, 15 in the deadband = ~30 s.
-    control_parameters:
-      kp: 0.492
-      ki: 0.0683
-      kd: 0.886
-      output_averaging_samples: 5
-      derivative_averaging_samples: 5
-    # Deadband in psi. Measured sensor noise is ~+/-0.1 (2026-09-10 log),
-    # and the whole control window on a 12-head line is only 1.6 psi, so
-    # the band is tight: +0.2 / -0.3 (a bit under setpoint is fine - the
-    # loop holds UNDER the setpoint). Inside the band P and D are off and
-    # I creeps at 5 %, so it can't hunt between pulse counts. The original
-    # +0.5 / -1.0 left the loop in-band almost always, crawling back from
-    # saturation at one pulse per ~50 s.
-    deadband_parameters:
-      threshold_high: 0.2
-      threshold_low: -0.3
-      kp_multiplier: 0.0
-      ki_multiplier: 0.05
-      kd_multiplier: 0.0
-      deadband_output_averaging_samples: 15
 
 interval:
   # ICE evaluation, once a second. Plain comparator with hysteresis, like
@@ -1323,6 +1174,41 @@ interval:
           else if (!running) st = "ARMED (pump stopped)";
           else st = "ARMED (loop closed)";
           set_status(st + latched);
+
+  # GUARD reflex, once a second. Independent of the Guard switch, of HA
+  # and of every other node: this board's transducer and this board's
+  # valves only.
+  #   trip : pressure >= Guard Reflex Pressure for 3 s, or the transducer
+  #          dead (no reading / lead open or shorted) for 5 s
+  #   clear: a good reading 2 psi under the threshold for 60 s. Clearing
+  #          moves nothing - the valves stay where they are.
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (!id(boot_done) || millis() < 15000) return;   // let the ADC settle
+          float v = id(pressure_volts).state;
+          float p = id(pump_pressure).state;
+          float th = id(reflex_psi).state;
+          bool ok = !isnan(v) && !isnan(p) && v > 0.7f && v < 5.3f;
+          if (!id(reflex_active)) {
+            bool trig = !ok || p >= th;
+            id(reflex_count) = trig ? id(reflex_count) + 1 : 0;
+            if (id(reflex_count) >= (ok ? 3 : 5)) {
+              id(reflex_active) = true;
+              id(reflex_count) = 0;
+              if (ok) ESP_LOGW("guard", "REFLEX: %.1f psi >= %.1f - valves to the floor", p, th);
+              else    ESP_LOGW("guard", "REFLEX: transducer fault (%.2f V) - valves to the floor", v);
+              id(guard_apply).execute();
+            }
+          } else {
+            bool clear = ok && p < th - 2.0f;
+            id(reflex_count) = clear ? id(reflex_count) + 1 : 0;
+            if (id(reflex_count) >= 60) {
+              id(reflex_active) = false;
+              id(reflex_count) = 0;
+              ESP_LOGI("guard", "reflex cleared at %.1f psi (valves left where they are)", p);
+            }
+          }
 
   - interval: 100ms
     then:
