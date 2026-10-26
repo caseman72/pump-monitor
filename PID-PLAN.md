@@ -86,7 +86,7 @@ Inherent behaviours, no extra handling needed:
 - Pump off → pressure ~0 < SP → output 0 → CV2 closes to pulse 0.
 - Open transducer lead → 110 psi → full cool → CV2 100 % = the safe state
   (plus CV1's fixed opening).
-- Pressure Control OFF → pid mode OFF → output 0 → CV2 closed.
+- Pressure Control OFF → the output lambda ignores the climate's writes (mode OFF writes 0 every sample) → CV2 stays put, manual control works.
 
 **PID climate** — `pid_pressure`, `internal: true` (HA converts ESPHome
 climate temperatures °C→°F, so a thermostat card would read "131 °F" for

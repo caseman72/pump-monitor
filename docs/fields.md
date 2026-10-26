@@ -290,6 +290,25 @@ vacations etc. They also produce the before/after data for the C-E grant.
     5 HP limit (~150). "Two lines at once" was an impact-head idea.
   - **Measure the real radius** of one #12 head at running pressure before
     committing the grid (46 ft → ~30 heads, not 25).
+- **Falcon ↔ impact equivalence (catalog, 2026-09-24).** Rain Bird Falcon
+  6504 nozzle table: **#12 (beige/tan)** = 9.7 GPM @ 40 psi, **11.0 @ 50**,
+  12.2 @ 60 (radius 53/55/57 ft); #10 (gray) = 8.1 / 9.1 / 10.0; #14
+  (light green) = 11.3 / 12.7 / 14.0. Against the psi model's 4.7 GPM per
+  5/32" impact head: **one tan Falcon ≈ 2.3 impact heads; 7 tan Falcons ≈
+  77 GPM ≈ 16-16.5 effective heads** → predicted pump ≈ 52.5-53 psi
+  (y = 60.2 − 0.02794x²), nozzle ≈ 50 psi after ~2 psi of mainline loss
+  (self-consistent). The "#12 × 7 ≈ 72 GPM" below used ~10.3 GPM/head;
+  the catalog says 11.0 at 50 psi, so ~77. Source: rainbird.com Falcon
+  6504 performance chart (D42381).
+  **MEASURED 2026-09-24: 7 tan Falcons = 54.6 psi at the gauge** → 14.2
+  effective heads. Zone GPM depends on which fit you believe: the pump
+  curve H = 61.3 − 0.001165·Q² says **75 GPM (10.7/head, 97 % of
+  catalog)**; the heads fit (4.7 GPM/head baked in, = 60.2 − 0.001265·Q²)
+  says 67 GPM (9.5/head, 86 %). The two fits disagree by ~10 GPM here;
+  the Falcons are roughly on catalog either way. **Use 14 effective heads
+  for a 7-tan-Falcon zone** - that is pressure-defined and fit-independent.
+  Cross-checks: #12 radius (55 ft @ 50 psi, 53 @ 40); Shelly kW vs the
+  18-head lines.
 - **⚠️ Falcons flow MORE per head than the current 5/32" impacts.** The
   whole pressure/zone model in TODO.md (heads → GPM → pump psi, the
   12-head floor) is built on ~4.7 GPM/head. A Rain Bird Falcon 6504 runs

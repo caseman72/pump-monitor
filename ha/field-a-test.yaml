@@ -1,0 +1,74 @@
+# Field A Test Cycle - DRAFT, NOT DEPLOYED (2026-10-08). See
+# NEW-PUMP-MONITOR-PLAN.md sections 14 and 16.
+#
+# Attended test only. Runs the decided Field A order 3-1-3-2-4-1-4-2 once,
+# block_min minutes per line (default 45 = 6 h total; 2 = a 16 min check), next line opened
+# and previous closed back to back (no wait: the valves close slowly), with
+# CV1 and CV2 held at 25 % as the guard. Ends with
+# every Field A line closed and the pump idling on the two CVs.
+#
+# Stand-in for the pump-controller firmware schedule, which does not exist
+# yet. It runs in HA, so it is NOT the unattended design: if HA stops, the
+# line that is open simply stays open (relays hold) with the CVs at 25 %.
+#
+# To stop early: turn the script off. The open line stays open.
+#
+# Before running: turn OFF the automations "Auto Close CV1" and "Irrigation
+# rotation - line swap detected". Either can close CV1 during the test.
+#
+# To deploy: paste the block below into /config/scripts.yaml on machone and
+# reload scripts.
+
+field_a_test:
+  alias: Field A Test Cycle
+  icon: mdi:sprinkler-variant
+  mode: single
+  fields:
+    block_min:
+      name: Minutes per line
+      default: 45
+      selector:
+        number:
+          min: 2
+          max: 180
+  variables:
+    block: "{{ block_min | default(45) | int }}"
+    order: [3, 1, 3, 2, 4, 1, 4, 2]
+    lines:
+      - switch.pump_controller_field_a_line_1
+      - switch.pump_controller_field_a_line_2
+      - switch.pump_controller_field_a_line_3
+      - switch.pump_controller_field_a_line_4
+  sequence:
+    - condition: state
+      entity_id: binary_sensor.pump_monitor_pump_running
+      state: 'on'
+    # The guard, by hand: both recycle valves to 25 % before any solenoid
+    # is trusted with the pump.
+    - action: valve.set_valve_position
+      target:
+        entity_id:
+          - valve.pump_monitor_valve_1
+          - valve.pump_monitor_valve_2
+      data:
+        position: 25
+    - delay: '00:00:10'
+    - repeat:
+        for_each: "{{ order }}"
+        sequence:
+          - variables:
+              line: "switch.pump_controller_field_a_line_{{ repeat.item }}"
+          # Open the next line, then close the others straight away: the
+          # solenoid valves close slowly, which is the overlap.
+          - action: switch.turn_on
+            target:
+              entity_id: "{{ line }}"
+          - action: switch.turn_off
+            target:
+              entity_id: "{{ lines | reject('eq', line) | list }}"
+          - delay:
+              minutes: "{{ block }}"
+    # End of the list: close everything, pump idles on the CVs.
+    - action: switch.turn_off
+      target:
+        entity_id: "{{ lines }}"

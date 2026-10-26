@@ -1,0 +1,1220 @@
+# Pump Monitor v2 - ESP32-C6-DevKitC in the Canaduino ESP32 PLC-100 V1
+#
+# v2 (2026-10-08) = pump-monitor.yaml + the MINIMUM-FLOW GUARD
+# (NEW-PUMP-MONITOR-PLAN.md section 4; search "GUARD"), minus the PID
+# pressure loop and the STOP All button. The loop is gone because both
+# valves now park at 25 % and stay there; its tuned gains (0.492 / 0.0683 /
+# 0.886) and history are in PID-PLAN.md and pump-monitor.yaml.
+# Same node name, so it flashes over the v1 firmware and keeps the
+# entities that remain; pump-monitor.yaml is the way back.
+#   Flash: ./upload.sh pump-monitor-v2.yaml <pump-monitor ip>
+#          (DRY_RUN=1 ./upload.sh pump-monitor.yaml prints that ip)
+#
+# Irrigation pump node: two flow-control valves, pump ICE enable relay,
+# pressure sensor.
+#
+# Two motorized ball valves (same model, 1/2" SS, ~3.55 s travel):
+#   Valve 1: REL1 (PCA9557 IO1) = close drive, REL2 (IO2) = open drive
+#   Valve 2: REL3 (PCA9557 IO3) = close drive, REL4 (IO4) = open drive
+#
+# Position is a pulse counter 0-16 (17 steps), dead-reckoned by motor
+# run-time: 0 = seated, 1 = breakaway pulse (T - 3.0 s, ~water-zero), then
+# +0.2 s of open travel per count, 16 = full open. Every move is ONE
+# continuous drive from the current counter to the target (no re-home);
+# open (16) and close (0) add the homing margin and land on an end-stop,
+# which resyncs the counter. The `valve` entity's position slider is the
+# same counter as a percentage (50% = pulse 8 = 0.55 + 7 x 0.2 = 1.95 s
+# from the seat); the "Pulse Position" number and Pulse +/- buttons are
+# the same counter as an integer. Pulse math lives in valve_math.h.
+#
+# Board port map ("ESP32 PLC 100 V1_SCH.pdf"):
+#   Relays Q1-Q6 via PCA9557 I2C expander @ 0x1A -> ULN2003 (IO1..IO6)
+#   I2C: SDA=GPIO6 SCL=GPIO7 (DS3231 RTC @ 0x68 on same bus)
+#   AI:  A1=GPIO0 A2=GPIO1 A3=GPIO2 A4=GPIO3 (0-10V, ~3:1 divider to 3.3 V)
+#
+# TODO: DS18B20 temperature like revel-monitor (one_wire on a spare GPIO)
+# Valve 2's Full Travel Time measured: 3.55 s, same as Valve 1 (Casey,
+# 2026-10-08).
+# Pressure: calibrated to the transducer spec (1-5 V = 0-100 psi). The dial
+#       gauge read ~8 psi higher; the transducer is trusted - absolute psi is
+#       only a reference, the trace (sprinkler zones, line changes) is what
+#       matters.
+
+substitutions:
+  # Secrets - override via upload.sh (parses secrets.h)
+  wifi_ssid: "PLACEHOLDER"
+  wifi_password: "PLACEHOLDER"
+  ap_password: "PLACEHOLDER"
+  ota_password: "PLACEHOLDER"
+  api_key: "PLACEHOLDER"
+
+  home_margin_s: "0.25"   # extra drive past full travel when homing either
+                          # direction; the end-stop switch cuts the motor
+
+  # Recycle flow per valve, GPM per % open. Bucket test 2026-10-01 with a
+  # Field A line running (~53 psi): 5 gal in 130 s at 25 % = 2.31 GPM.
+  # Measured up to 50 % total opening only; beyond that it is a guess.
+  recycle_gpm_per_pct: "0.0923"
+
+  # GUARD: the floor both recycle valves are held at or above while the
+  # guard is active. Pulse 4 = 25 % = 2.3 GPM per valve (bucket test
+  # 2026-10-01); one valve alone is still above the pump's thermal minimum.
+  guard_pulse: "4"
+  # The floor in force right now. Used at the ONE choke point (the pulse
+  # scripts), so nothing can command a valve below it.
+  guard_floor: "((id(guard_sw).state || id(reflex_active)) ? ${guard_pulse} : 0)"
+
+  # ICE relay polarity. "true": pump loop runs through the module's NO
+  # contact, relay ENERGIZED = loop closed (every ESP reboot drops the loop
+  # for ~1 s - on a latching starter that kills the pump). "false": loop
+  # through the NC contact, relay energized only to TRIP - reboots, crashes
+  # and a dead controller all leave the pump running. NC is recommended.
+  ice_run_energized: "true"
+
+esphome:
+  name: pump-monitor
+  friendly_name: Pump Monitor
+  includes:
+    - valve_math.h
+  on_boot:
+    priority: -100
+    then:
+      # Seed every reported position from the firmware's own restored
+      # globals. ESPHome's Valve::position is an uninitialized float, so on
+      # a first boot with no saved valve state it reports RAM garbage
+      # (clamped to 1.0 = "open") - which is what looked like "the valves
+      # opened on reboot". The ball never moves at boot; only the report
+      # was wrong. v1_pulse/v2_pulse restore from flash (0 when never saved).
+      - lambda: |-
+          id(valve_1).position = id(v1_pulse) / (float) VM_PULSE_MAX;
+          id(valve_1).publish_state();
+          id(valve_2).position = id(v2_pulse) / (float) VM_PULSE_MAX;
+          id(valve_2).publish_state();
+          id(v1_pulse_target) = id(v1_pulse);
+          id(v2_pulse_target) = id(v2_pulse);
+          id(v1_pulse_number).publish_state(id(v1_pulse));
+          id(v1_pulse_count).publish_state(id(v1_pulse));
+          id(v2_pulse_number).publish_state(id(v2_pulse));
+          id(v2_pulse_count).publish_state(id(v2_pulse));
+      - script.execute: ice_apply
+      # GUARD: from here on the Guard switch acts, and if it restored ON
+      # the valves are brought up to the floor (no move if already there).
+      - lambda: 'id(boot_done) = true;'
+      - script.execute: guard_apply
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  power_save_mode: NONE
+  reboot_timeout: 15min
+  # Fallback hotspot: if Wi-Fi is unreachable, the device broadcasts its
+  # own AP so you can connect (192.168.4.1) and recover/OTA it.
+  ap:
+    ssid: "Pump-Monitor"
+    password: ${ap_password}
+
+captive_portal:
+
+api:
+  encryption:
+    key: ${api_key}
+
+ota:
+  platform: esphome
+  password: ${ota_password}
+
+logger:
+  level: INFO
+
+# Local override of the pca9554 component (components/pca9554): preserves
+# the expander's outputs at init so the ICE relay never blips on reboot/OTA.
+external_components:
+  - source:
+      type: local
+      path: components
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+pca9554:   # PCA9557 - same register map; relays on IO1..IO6 (IO0 skipped)
+  - id: relay_expander
+    address: 0x1A
+
+globals:
+  # Pulse counters (0..16) - actual position, restored across reboots
+  - id: v1_pulse
+    type: int
+    restore_value: yes
+    initial_value: '0'
+  - id: v1_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_pulse
+    type: int
+    restore_value: yes
+    initial_value: '0'
+  - id: v2_pulse_target
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # Target latched by the running pulse script. The queued script must
+  # finish the move it STARTED: reading vN_pulse_target again at the end
+  # stamps the counter with whatever was requested since (the old PID loop queued
+  # targets faster than a 3 s close) and desyncs dead reckoning.
+  - id: v1_pulse_run
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_pulse_run
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # ICE state. ice_tripped is the ALERT latch (persists; cleared by ICE
+  # Reset). ice_loop_open is the CONTROL state: set by a trip, cleared
+  # automatically once the pump is confirmed stopped (so a manual restart
+  # at the pump house works without HA) or by ICE Reset.
+  - id: ice_tripped
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+  - id: ice_loop_open
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ice_pump_was_running
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ice_start_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_stopped_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_trip_reason
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: ice_test_latched
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: ice_low_armed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  # After a trip: pressure should collapse. If the pump is still running
+  # 60 s later, the relay did not open the loop (dead relay / wiring) ->
+  # trip_failed, and the operator should swap the REL5/REL6 selector.
+  - id: ice_trip_failed
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: ice_live_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_high_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_low_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: ice_run_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # GUARD state. reflex_active: pressure (or a dead transducer) says the
+  # pump has no field flow, so the floor is forced even with Guard OFF.
+  - id: boot_done
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: reflex_active
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: reflex_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  # Stopwatch state per valve: 0 = idle, 1 = closing, 2 = opening
+  - id: v1_t_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: v1_timing
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: v2_t_start
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: v2_timing
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+switch:
+  # Raw relay switches - diagnostics / manual override. The valve entities
+  # and pulse numbers are the normal interface.
+  - platform: gpio
+    name: "Valve 1 Close (REL1)"
+    id: v1_close
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 1
+      mode: OUTPUT
+    interlock: [v1_open]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v1_t_start) = millis();
+          id(v1_timing) = 1;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v1_timing) == 1) {
+            float t = (millis() - id(v1_t_start)) / 1000.0f;
+            id(v1_timing) = 0;
+            id(v1_elapsed).publish_state(t);
+            id(v1_last_close_time).publish_state(t);
+            ESP_LOGI("valve1", "CLOSE energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 1 Open (REL2)"
+    id: v1_open
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 2
+      mode: OUTPUT
+    interlock: [v1_close]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v1_t_start) = millis();
+          id(v1_timing) = 2;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v1_timing) == 2) {
+            float t = (millis() - id(v1_t_start)) / 1000.0f;
+            id(v1_timing) = 0;
+            id(v1_elapsed).publish_state(t);
+            id(v1_last_open_time).publish_state(t);
+            ESP_LOGI("valve1", "OPEN energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 2 Close (REL3)"
+    id: v2_close
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 3
+      mode: OUTPUT
+    interlock: [v2_open]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v2_t_start) = millis();
+          id(v2_timing) = 1;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v2_timing) == 1) {
+            float t = (millis() - id(v2_t_start)) / 1000.0f;
+            id(v2_timing) = 0;
+            id(v2_elapsed).publish_state(t);
+            id(v2_last_close_time).publish_state(t);
+            ESP_LOGI("valve2", "CLOSE energized for %.2f s", t);
+          }
+
+  - platform: gpio
+    name: "Valve 2 Open (REL4)"
+    id: v2_open
+    restore_mode: ALWAYS_OFF
+    pin:
+      pca9554: relay_expander
+      number: 4
+      mode: OUTPUT
+    interlock: [v2_close]
+    interlock_wait_time: 300ms
+    on_turn_on:
+      - lambda: |-
+          id(v2_t_start) = millis();
+          id(v2_timing) = 2;
+      - script.execute: safety_timeout
+    on_turn_off:
+      - lambda: |-
+          if (id(v2_timing) == 2) {
+            float t = (millis() - id(v2_t_start)) / 1000.0f;
+            id(v2_timing) = 0;
+            id(v2_elapsed).publish_state(t);
+            id(v2_last_open_time).publish_state(t);
+            ESP_LOGI("valve2", "OPEN energized for %.2f s", t);
+          }
+
+  # ICE (in-case-of-emergency) pump protection: REL5/REL6 drive an external
+  # 2-relay module in line with the pump's latching starter loop. ONE break
+  # of that loop = pump off until someone restarts it by hand, so the loop
+  # is opened ONLY on a latched pressure trip - never for a reboot or a
+  # switch. Only ONE relay is in service; the other is a spare selected via
+  # "Control Wiring Relay Select" (no OTA needed if one dies).
+  - platform: gpio
+    id: ice_rel5
+    name: "ICE REL5 (raw)"
+    internal: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    pin:
+      pca9554: relay_expander
+      number: 5
+      mode: OUTPUT
+
+  - platform: gpio
+    id: ice_rel6
+    name: "ICE REL6 (raw)"
+    internal: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    pin:
+      pca9554: relay_expander
+      number: 6
+      mode: OUTPUT
+
+  # ON  = BYPASS: loop held closed unconditionally (work on the board,
+  #       reboot, change a valve). Default, and remembered across reboots.
+  # OFF = AUTOMATION ARMED: loop still closed; opened only by a pressure
+  #       trip (see ICE High/Low Trip). Turning this OFF never cuts power.
+  # The actual loop state is the read-only "Control Wiring Relay" sensor.
+  - platform: template
+    name: "ICE Bypass"
+    id: ice_bypass
+    icon: "mdi:shield-check"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - script.execute: ice_apply
+    on_turn_off:
+      - script.execute: ice_apply
+
+  # Test mode: the trip logic runs and reports in "ICE Status" ("TEST:
+  # would trip ...") but the relay is never actuated. Use with a lowered
+  # High Trip and a slow main-valve closure to prove the logic safely.
+  - platform: template
+    name: "ICE Test Mode"
+    id: ice_test_mode
+    icon: "mdi:test-tube"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+
+  # ---- GUARD (minimum-flow guard) ----
+  # ON  = both recycle valves are held at or above pulse ${guard_pulse}
+  #       (25 %). A "close" from HA or a Pulse - stops at the floor. This is the state for solenoid lines, small sets and
+  #       nothing running. Default, and remembered across reboots.
+  # OFF = no floor: the valves may be closed (a big manual line is open
+  #       and cannot shut by itself). Turning it OFF moves nothing. The
+  #       reflex (Guard Reflex Pressure) still forces the floor.
+  - platform: template
+    name: "Guard"
+    id: guard_sw
+    icon: "mdi:shield-sync"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      # The switch restores during setup, before the valves are seeded -
+      # on_boot runs guard_apply itself once that is done.
+      - if:
+          condition:
+            lambda: 'return id(boot_done);'
+          then:
+            - script.execute: guard_apply
+
+select:
+  - platform: template
+    name: "Control Wiring Relay Select"
+    id: ice_select
+    options: ["REL5", "REL6"]
+    initial_option: "REL5"
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    icon: "mdi:swap-horizontal"
+    on_value:
+      # Re-drive the loop state onto the newly selected relay
+      # (make-before-break inside ice_apply).
+      - script.execute: ice_apply
+
+# Native HA valve entities. Position slider = pulse counter / 16 (50% =
+# pulse 8). open = 16 (end-stop), close = 0 (SEAT - with a single valve,
+# pump off only!), stop = relays off. Every command is a plain pulse move
+# from the current counter. restore_mode RESTORE: the ball doesn't move on
+# reboot, so the last reported position is still true.
+valve:
+  - platform: template
+    name: "Valve 1"
+    id: valve_1
+    device_class: water
+    optimistic: true
+    has_position: true
+    restore_mode: RESTORE
+    open_action:
+      - globals.set:
+          id: v1_pulse_target
+          value: !lambda 'return VM_PULSE_MAX;'
+      - script.execute: v1_pulse_go
+    close_action:
+      - globals.set:
+          id: v1_pulse_target
+          value: '0'
+      - script.execute: v1_pulse_go
+    position_action:
+      - globals.set:
+          id: v1_pulse_target
+          value: !lambda 'return (int) lroundf(pos * VM_PULSE_MAX);'
+      - script.execute: v1_pulse_go
+    stop_action:
+      - script.stop: v1_pulse_go
+      - switch.turn_off: v1_open
+      - switch.turn_off: v1_close
+
+  - platform: template
+    name: "Valve 2"
+    id: valve_2
+    device_class: water
+    optimistic: true
+    has_position: true
+    restore_mode: RESTORE
+    open_action:
+      - globals.set:
+          id: v2_pulse_target
+          value: !lambda 'return VM_PULSE_MAX;'
+      - script.execute: v2_pulse_go
+    close_action:
+      - globals.set:
+          id: v2_pulse_target
+          value: '0'
+      - script.execute: v2_pulse_go
+    position_action:
+      - globals.set:
+          id: v2_pulse_target
+          value: !lambda 'return (int) lroundf(pos * VM_PULSE_MAX);'
+      - script.execute: v2_pulse_go
+    stop_action:
+      - script.stop: v2_pulse_go
+      - switch.turn_off: v2_open
+      - switch.turn_off: v2_close
+
+button:
+  # Pulse +/- : step the pulse counter by one. Each press advances the
+  # LAST REQUESTED target (not the current position), so rapid presses
+  # accumulate correctly while a move is still in flight (queued script).
+  - platform: template
+    name: "Valve 1 Pulse +"
+    icon: "mdi:plus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v1_pulse_target) + 1;
+          if (t > VM_PULSE_MAX) t = VM_PULSE_MAX;
+          id(v1_pulse_target) = t;
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 1 Pulse -"
+    icon: "mdi:minus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v1_pulse_target) - 1;
+          if (t < 0) t = 0;
+          id(v1_pulse_target) = t;
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse +"
+    icon: "mdi:plus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v2_pulse_target) + 1;
+          if (t > VM_PULSE_MAX) t = VM_PULSE_MAX;
+          id(v2_pulse_target) = t;
+      - script.execute: v2_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse -"
+    icon: "mdi:minus-box"
+    on_press:
+      - lambda: |-
+          int t = id(v2_pulse_target) - 1;
+          if (t < 0) t = 0;
+          id(v2_pulse_target) = t;
+      - script.execute: v2_pulse_go
+
+  # Clears the latched alerts (real or test). The loop itself follows
+  # pressure; a manual restart re-closes it as pressure passes Low Trip.
+  - platform: template
+    name: "ICE Reset"
+    icon: "mdi:restart-alert"
+    on_press:
+      - lambda: |-
+          id(ice_tripped) = false;
+          id(ice_loop_open) = false;
+          id(ice_trip_reason) = "";
+          id(ice_test_latched) = "";
+          id(ice_trip_failed) = false;
+          id(ice_live_count) = 0;
+          id(ice_stopped_count) = 0;
+          id(ice_start_count) = 0;
+          id(ice_low_armed) = false;
+          id(ice_high_count) = 0;
+          id(ice_low_count) = 0;
+          id(ice_run_count) = 0;
+          ESP_LOGW("ice", "Trip reset by user");
+      - script.execute: ice_apply
+
+  - platform: restart
+    name: "Restart"
+    icon: "mdi:restart"
+
+number:
+  # THE per-valve calibration constant: full travel time, measured with the
+  # seat test (drive closed onto the seat, then time open-to-endstop;
+  # travel is symmetric). All homing drives and position pulses scale from
+  # this at runtime - a replacement valve of the same model only needs
+  # this number changed.
+  - platform: template
+    name: "Valve 1 Full Travel Time"
+    id: v1_travel_time
+    unit_of_measurement: "s"
+    min_value: 2.0
+    max_value: 6.0
+    step: 0.01
+    initial_value: 3.55
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "Valve 2 Full Travel Time"
+    id: v2_travel_time
+    unit_of_measurement: "s"
+    min_value: 2.0
+    max_value: 6.0
+    step: 0.01
+    initial_value: 3.55
+    optimistic: true
+    restore_value: true
+    entity_category: config
+    mode: box
+
+  # ICE band: relay closed while Low Trip < p < High Trip. Below low for
+  # 5 s or above high for 3 s opens it; back in band for 2 s re-closes it.
+  # The ICE is the ONLY high-pressure protection: the Furnas only does low,
+  # and a dead-headed centrifugal pump draws LESS current so the thermal
+  # overloads never see it. Goulds 3656 1-1/2x2-6, 5-15/16" impeller,
+  # 3500 RPM, with ~11 ft of FLOODED suction from the pond (+~5 psi at the
+  # gauge): shutoff ~70 psi at the gauge, BEP ~57 psi @ 100 GPM, 5 HP limit
+  # ~46 psi @ 150 GPM. High Trip 65 psi: above BEP with margin for the
+  # future controller, 5 psi below dead-head.
+  # Low Trip defaults to 0 = DISABLED: the ICE is the HIGH-pressure guard;
+  # low pressure is the Furnas's job (20 psi) with the starter's thermal
+  # overloads behind it - no second device arguing about low pressure.
+  # Pump -> Furnas -> Relay in series in the 120 VAC starter loop; the
+  # starter's MANUAL position bypasses the circuit for starting.
+  - platform: template
+    name: "ICE High Trip"
+    id: ice_high_trip
+    unit_of_measurement: "psi"
+    icon: "mdi:gauge-full"
+    entity_category: config
+    min_value: 30
+    max_value: 120
+    step: 1
+    initial_value: 58
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  - platform: template
+    name: "ICE Low Trip"
+    id: ice_low_trip
+    unit_of_measurement: "psi"
+    icon: "mdi:gauge-empty"
+    entity_category: config
+    min_value: 0
+    max_value: 50
+    step: 1
+    initial_value: 0
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  # GUARD reflex threshold. Pressure at or above this for 3 s means the
+  # pump has lost its field flow -> both valves to the floor, Guard ON or
+  # not. Measured 2026-10-09: every Field A line runs 52.8-53.3 (54.7
+  # with the valves closed); no field flow with both valves at 25 % idles
+  # at 58.8, so it also reads tripped while idling on the guard (valves
+  # already there, nothing moves). 110 = never (the sensor clamps
+  # there). The air blow-out does not reach the transducer (it is behind
+  # the valve closed for it), so nothing needs changing for that.
+  - platform: template
+    name: "Guard Reflex Pressure"
+    id: reflex_psi
+    unit_of_measurement: "psi"
+    icon: "mdi:shield-alert"
+    entity_category: config
+    min_value: 45
+    max_value: 110
+    step: 0.5
+    initial_value: 57
+    optimistic: true
+    restore_value: true
+    mode: box
+
+  # Pulse target (0..16): direct "jump to N" - pulses the valve from its
+  # current counter to N in ONE continuous drive. The everyday controls are
+  # the Pulse +/- buttons; this lives in the config category. (HA number
+  # entities are floats, hence the separate integer Pulse Position sensor.)
+  - platform: template
+    name: "Valve 1 Pulse Target"
+    id: v1_pulse_number
+    icon: "mdi:target"
+    entity_category: config
+    min_value: 0
+    max_value: 16
+    step: 1
+    mode: box
+    update_interval: never
+    set_action:
+      - globals.set:
+          id: v1_pulse_target
+          value: !lambda 'return (int) x;'
+      - script.execute: v1_pulse_go
+
+  - platform: template
+    name: "Valve 2 Pulse Target"
+    id: v2_pulse_number
+    icon: "mdi:target"
+    entity_category: config
+    min_value: 0
+    max_value: 16
+    step: 1
+    mode: box
+    update_interval: never
+    set_action:
+      - globals.set:
+          id: v2_pulse_target
+          value: !lambda 'return (int) x;'
+      - script.execute: v2_pulse_go
+
+script:
+  # ---- Pulse positioning (valve entity, Pulse Target, Pulse +/-, guard) ----
+  # Moves from the current counter to the target in one continuous pulse
+  # (no re-home). Queued: rapid +/+/+ presses each run in order, and each
+  # run latches the latest target when it STARTS (vN_pulse_run), so the
+  # valve ends where the last press asked and the counter always matches
+  # the move actually made. Going to 0 or 16 adds the homing margin to guarantee the
+  # end-stop (that is what resyncs the dead-reckoned counter). Publishes
+  # the valve entity's position (counter / 16) when done.
+  - id: v1_pulse_go
+    mode: queued
+    then:
+      # GUARD: let the caller finish first. The valve entity is optimistic
+      # and stamps the REQUESTED position after its action returns; without
+      # this a clamped "close" would end up reported as closed.
+      - delay: 20ms
+      # GUARD choke point: no target below the floor in force.
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v1_pulse_target) < f) {
+            ESP_LOGI("guard", "CV1 target %d held at floor %d", id(v1_pulse_target), f);
+            id(v1_pulse_target) = f;
+          }
+          id(v1_pulse_run) = id(v1_pulse_target);
+      - if:
+          condition:
+            lambda: 'return id(v1_pulse_run) > id(v1_pulse);'
+          then:
+            - switch.turn_off: v1_close
+            - switch.turn_on: v1_open
+            - delay: !lambda |-
+                float T = id(v1_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v1_pulse_run), T) - vm_pulse_to_open_s(id(v1_pulse), T);
+                if (id(v1_pulse_run) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms open", id(v1_pulse), id(v1_pulse_run), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v1_open
+      - if:
+          condition:
+            lambda: 'return id(v1_pulse_run) < id(v1_pulse);'
+          then:
+            - switch.turn_off: v1_open
+            - switch.turn_on: v1_close
+            - delay: !lambda |-
+                float T = id(v1_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v1_pulse), T) - vm_pulse_to_open_s(id(v1_pulse_run), T);
+                if (id(v1_pulse_run) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve1", "Pulse %d -> %d: %.0f ms close", id(v1_pulse), id(v1_pulse_run), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v1_close
+      - lambda: |-
+          id(v1_pulse) = id(v1_pulse_run);
+          id(v1_pulse_number).publish_state(id(v1_pulse));
+          id(v1_pulse_count).publish_state(id(v1_pulse));
+          id(valve_1).position = id(v1_pulse) / (float) VM_PULSE_MAX;
+          id(valve_1).publish_state();
+
+  - id: v2_pulse_go
+    mode: queued
+    then:
+      # GUARD: let the caller finish first. The valve entity is optimistic
+      # and stamps the REQUESTED position after its action returns; without
+      # this a clamped "close" would end up reported as closed.
+      - delay: 20ms
+      # GUARD choke point: no target below the floor in force.
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v2_pulse_target) < f) {
+            ESP_LOGI("guard", "CV2 target %d held at floor %d", id(v2_pulse_target), f);
+            id(v2_pulse_target) = f;
+          }
+          id(v2_pulse_run) = id(v2_pulse_target);
+      - if:
+          condition:
+            lambda: 'return id(v2_pulse_run) > id(v2_pulse);'
+          then:
+            - switch.turn_off: v2_close
+            - switch.turn_on: v2_open
+            - delay: !lambda |-
+                float T = id(v2_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v2_pulse_run), T) - vm_pulse_to_open_s(id(v2_pulse), T);
+                if (id(v2_pulse_run) >= VM_PULSE_MAX) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms open", id(v2_pulse), id(v2_pulse_run), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v2_open
+      - if:
+          condition:
+            lambda: 'return id(v2_pulse_run) < id(v2_pulse);'
+          then:
+            - switch.turn_off: v2_open
+            - switch.turn_on: v2_close
+            - delay: !lambda |-
+                float T = id(v2_travel_time).state;
+                float s = vm_pulse_to_open_s(id(v2_pulse), T) - vm_pulse_to_open_s(id(v2_pulse_run), T);
+                if (id(v2_pulse_run) <= 0) s += ${home_margin_s};
+                ESP_LOGI("valve2", "Pulse %d -> %d: %.0f ms close", id(v2_pulse), id(v2_pulse_run), s * 1000.0f);
+                return (uint32_t)(s * 1000.0f);
+            - switch.turn_off: v2_close
+      - lambda: |-
+          id(v2_pulse) = id(v2_pulse_run);
+          id(v2_pulse_number).publish_state(id(v2_pulse));
+          id(v2_pulse_count).publish_state(id(v2_pulse));
+          id(valve_2).position = id(v2_pulse) / (float) VM_PULSE_MAX;
+          id(valve_2).publish_state();
+
+  # Drive the ICE relay to the current loop state. Loop is CLOSED (pump may
+  # run) unless a real trip is latched and bypass is off. Polarity per
+  # ice_run_energized. Make-before-break across the REL5/REL6 selector.
+  - id: ice_apply
+    mode: restart
+    then:
+      - lambda: |-
+          bool loop_closed = id(ice_bypass).state || !id(ice_loop_open);
+          bool energize = loop_closed ? ${ice_run_energized} : !${ice_run_energized};
+          bool use5 = id(ice_select).active_index().value_or(0) == 0;
+          if (energize) {
+            if (use5) { id(ice_rel5).turn_on();  id(ice_rel6).turn_off(); }
+            else      { id(ice_rel6).turn_on();  id(ice_rel5).turn_off(); }
+          } else {
+            id(ice_rel5).turn_off();
+            id(ice_rel6).turn_off();
+          }
+          id(ice_loop_closed).publish_state(loop_closed);
+          id(ice_relay_energized).publish_state(energize);
+          ESP_LOGI("ice", "loop %s (relay %s, %s)", loop_closed ? "CLOSED" : "OPEN",
+                   energize ? "energized" : "released", use5 ? "REL5" : "REL6");
+
+  # GUARD: bring both valves up to the floor in force (no-op when the
+  # floor is 0 or they are already at/above it). Never closes anything.
+  - id: guard_apply
+    mode: restart
+    then:
+      - lambda: |-
+          int f = ${guard_floor};
+          if (id(v1_pulse_target) < f) { id(v1_pulse_target) = f; id(v1_pulse_go).execute(); }
+          if (id(v2_pulse_target) < f) { id(v2_pulse_target) = f; id(v2_pulse_go).execute(); }
+
+  # Dead-man: drops the valve relays 20 s after the last turn-on no matter
+  # what (covers a lost HA/Wi-Fi connection mid-move). Harmless no-op if
+  # the relays were already released. Does NOT touch the ICE relays.
+  - id: safety_timeout
+    mode: restart
+    then:
+      - delay: 20s
+      - switch.turn_off: v1_open
+      - switch.turn_off: v1_close
+      - switch.turn_off: v2_open
+      - switch.turn_off: v2_close
+      - logger.log:
+          level: WARN
+          tag: valve
+          format: "Safety timeout - valve relays forced off"
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    id: wifi_rssi
+    update_interval: 60s
+    icon: "mdi:wifi"
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+    icon: "mdi:timer-outline"
+    entity_category: diagnostic
+
+  # ---- Pressure ----
+  # 1-5 V ratiometric transducer, 0-100 psi, on AI1 (GPIO0). The ESP32
+  # PLC-100 V1 divides 0-10 V down to ~3.3 V for the ADC (~3:1 - NOT the
+  # 2:1 of the 5 V Nano board). Multiplier fitted 2026-08-18: sensor
+  # 3.079 V (meter) while the ADC read 0.995 V -> 3.094. Refine with a
+  # second point at 0 psi (depressurize, compare meter vs this sensor).
+  # Calibration is then on SENSOR-side volts against the measured 5.045 V
+  # supply: 1.009 V = 0 psi, 5.045 V = 100 psi (ratiometric). Add a third
+  # calibrate_linear point to match a reference gauge if preferred.
+  - platform: adc
+    pin: GPIO0
+    id: pressure_volts
+    name: "Pressure Sensor Voltage"
+    attenuation: 12db
+    update_interval: 500ms
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:sine-wave"
+    entity_category: diagnostic
+    filters:
+      - multiply: 3.094
+      - sliding_window_moving_average:
+          window_size: 8
+          send_every: 4
+
+  - platform: copy
+    source_id: pressure_volts
+    name: "Pump Pressure"
+    id: pump_pressure
+    unit_of_measurement: "psi"
+    device_class: pressure
+    accuracy_decimals: 1
+    icon: "mdi:gauge"
+    filters:
+      - calibrate_linear:
+          - 1.009 -> 0.0
+          - 5.045 -> 100.0
+      - clamp:
+          min_value: 0
+          max_value: 110
+
+  # The pulse counter as HA sees it - a true integer sensor ("3", never
+  # "3.0"). Controlled by the Pulse +/- buttons (or the Pulse Target number
+  # for a direct jump).
+  - platform: template
+    name: "Valve 1 Pulse Position"
+    id: v1_pulse_count
+    icon: "mdi:counter"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: template
+    name: "Valve 2 Pulse Position"
+    id: v2_pulse_count
+    icon: "mdi:counter"
+    accuracy_decimals: 0
+    update_interval: never
+
+  # Water going back to the pond through the two recycle valves, from the
+  # valve positions (not measured flow): ${recycle_gpm_per_pct} GPM per % open, per valve.
+  # 25 % + 25 % = 4.6 GPM. Zero while the pump is stopped.
+  - platform: template
+    name: "Recycle Flow"
+    id: recycle_gpm
+    unit_of_measurement: "gal/min"
+    device_class: volume_flow_rate
+    state_class: measurement
+    icon: "mdi:pipe-valve"
+    accuracy_decimals: 1
+    update_interval: 2s
+    lambda: |-
+      if (!id(pump_running).state) return 0.0f;
+      float pct = (id(v1_pulse) + id(v2_pulse)) * 100.0f / VM_PULSE_MAX;
+      return ${recycle_gpm_per_pct} * pct;
+    filters:
+      - delta: 0.05
+
+  # ---- Per-valve motion diagnostics ----
+  # Live stopwatch while a relay is energized (freezes at the final
+  # value), plus the last pulse durations - verify positioning from HA
+  # without log access.
+  - platform: template
+    name: "Valve 1 Elapsed"
+    id: v1_elapsed
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 1 Last Open Time"
+    id: v1_last_open_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 1 Last Close Time"
+    id: v1_last_close_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+
+  - platform: template
+    name: "Valve 2 Elapsed"
+    id: v2_elapsed
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 2 Last Open Time"
+    id: v2_last_open_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+  - platform: template
+    name: "Valve 2 Last Close Time"
+    id: v2_last_close_time
+    unit_of_measurement: "s"
+    accuracy_decimals: 2
+    update_interval: never
+    entity_category: diagnostic
+
+binary_sensor:
+  # The pump control loop as the pump sees it: ON = closed (pump enabled),
+  # OFF = open (tripped). True for either NO or NC wiring.
+  - platform: template
+    name: "Control Wiring Relay"
+    id: ice_loop_closed
+    device_class: power
+    icon: "mdi:electric-switch"
+
+  # Raw coil state of the selected ICE relay (bench diagnostics).
+  - platform: template
+    name: "ICE Relay Energized"
+    id: ice_relay_energized
+    icon: "mdi:electric-switch-closed"
+    entity_category: diagnostic
+
+  - platform: template
+    name: "ICE Tripped"
+    id: ice_tripped_sensor
+    device_class: problem
+    icon: "mdi:alert-octagon"
+    lambda: 'return id(ice_tripped);'
+
+  # GUARD: ON while the reflex is forcing the floor.
+  - platform: template
+    name: "Guard Reflex"
+    id: reflex_sensor
+    device_class: problem
+    icon: "mdi:shield-alert"
+    lambda: 'return id(reflex_active);'
+
+  - platform: template
+    name: "ICE Trip Failed"
+    device_class: problem
+    icon: "mdi:alert-decagram"
+    lambda: 'return id(ice_trip_failed);'
+
+  # The real feedback for the whole ICE chain: pressure. No pressure = no
+  # pump. (> 10 psi with 5 s hysteresis.)
+  - platform: template
+    name: "Pump Running"
+    id: pump_running
+    device_class: running
+    icon: "mdi:pump"
+    lambda: 'return !isnan(id(pump_pressure).state) && id(pump_pressure).state > 10.0f;'
+    filters:
+      - delayed_on: 5s
+      - delayed_off: 5s
+
+text_sensor:
+  - platform: template
+    name: "ICE Status"
+    id: ice_status
+    icon: "mdi:shield-half-full"
+    update_interval: never
+
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      icon: "mdi:ip-network"
+      entity_category: diagnostic
+    ssid:
+      name: "WiFi Network"
+      icon: "mdi:wifi-cog"
+      entity_category: diagnostic
+
+interval:
+  # ICE evaluation, once a second. Plain comparator with hysteresis, like
+  # the Furnas itself: the relay is CLOSED while Low Trip < p < High Trip
+  # and OPEN otherwise (debounced). Starting is done with the starter in
+  # MANUAL (circuit bypassed); once at pressure the relay is already closed
+  # and the starter is flipped to AUTO. Alerts latch until ICE Reset.
+  - interval: 1s
+    then:
+      - lambda: |-
+          auto set_status = [&](const std::string &x) {
+            if (id(ice_status).state != x) id(ice_status).publish_state(x);
+          };
+          float v = id(pressure_volts).state;
+          float p = id(pump_pressure).state;
+          bool sensor_ok = !isnan(v) && !isnan(p) && v > 0.7f && v < 5.3f;
+          bool running = sensor_ok && p > 10.0f;
+          float hi = id(ice_high_trip).state;
+          float lo = id(ice_low_trip).state;
+          std::string latched = id(ice_tripped) ? " - alert latched: " + id(ice_trip_reason) + " (ICE Reset to clear)" : "";
+
+          if (id(ice_bypass).state) {
+            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_start_count) = 0;
+            set_status("BYPASS (loop held closed)" + latched);
+            return;
+          }
+          if (!sensor_ok) {
+            id(ice_high_count) = 0; id(ice_low_count) = 0; id(ice_start_count) = 0;
+            set_status(std::string("SENSOR FAULT - holding loop ") + (id(ice_loop_open) ? "OPEN" : "CLOSED") + latched);
+            return;
+          }
+
+          bool too_high = p >= hi;
+          bool too_low  = lo > 0.5f && p <= lo;
+          id(ice_high_count) = too_high ? id(ice_high_count) + 1 : 0;
+          id(ice_low_count)  = too_low  ? id(ice_low_count)  + 1 : 0;
+          // ice_start_count doubles as the "back in band" debounce
+          id(ice_start_count) = (!too_high && !too_low) ? id(ice_start_count) + 1 : 0;
+
+          const char *why = nullptr;
+          if (id(ice_high_count) >= 3) why = "HIGH";
+          else if (id(ice_low_count) >= 5) why = "LOW";
+
+          if (!id(ice_loop_open)) {
+            if (why != nullptr) {
+              char buf[64];
+              snprintf(buf, sizeof(buf), "%s at %.1f psi", why, p);
+              if (id(ice_test_mode).state) {
+                id(ice_test_latched) = std::string("TEST: would open loop - ") + buf;
+                ESP_LOGW("ice", "%s", id(ice_test_latched).c_str());
+                id(ice_high_count) = 0; id(ice_low_count) = 0;
+              } else {
+                id(ice_loop_open) = true;
+                id(ice_tripped) = true;
+                id(ice_trip_reason) = buf;
+                id(ice_live_count) = 0;
+                ESP_LOGE("ice", "TRIP %s - opening pump loop", buf);
+                id(ice_apply).execute();
+                set_status(std::string("TRIPPED ") + buf + " (loop open)");
+                return;
+              }
+            }
+          } else {
+            // Loop open. Verify the trip took (pressure is the feedback),
+            // and re-close once pressure is back inside the band.
+            if (running) {
+              if (++id(ice_live_count) >= 120 && !id(ice_trip_failed)) {
+                id(ice_trip_failed) = true;
+                ESP_LOGE("ice", "TRIP FAILED - pump still running 120 s after trip; check relay / swap selector");
+              }
+            } else {
+              id(ice_live_count) = 0;
+            }
+            if (id(ice_start_count) >= 2) {
+              id(ice_loop_open) = false;
+              id(ice_live_count) = 0;
+              ESP_LOGW("ice", "Pressure back in band (%.1f psi) - loop re-closed%s", p,
+                       id(ice_tripped) ? " (alert still latched)" : "");
+              id(ice_apply).execute();
+            } else {
+              if (id(ice_trip_failed))
+                set_status("TRIP FAILED - pump still running after " + id(ice_trip_reason) + " - check relay / swap selector");
+              else
+                set_status("LOOP OPEN - " + id(ice_trip_reason) + (running ? " (pump still running)" : " (pump stopped; re-closes when pressure > " + std::to_string((int) lo) + " psi)"));
+              return;
+            }
+          }
+
+          std::string st;
+          if (!id(ice_test_latched).empty()) st = id(ice_test_latched);
+          else if (!running) st = "ARMED (pump stopped)";
+          else st = "ARMED (loop closed)";
+          set_status(st + latched);
+
+  # GUARD reflex, once a second. Independent of the Guard switch, of HA
+  # and of every other node: this board's transducer and this board's
+  # valves only.
+  #   trip : pressure >= Guard Reflex Pressure for 3 s, or the transducer
+  #          dead (no reading / lead open or shorted) for 5 s
+  #   clear: a good reading 2 psi under the threshold for 60 s. Clearing
+  #          moves nothing - the valves stay where they are.
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (!id(boot_done) || millis() < 15000) return;   // let the ADC settle
+          float v = id(pressure_volts).state;
+          float p = id(pump_pressure).state;
+          float th = id(reflex_psi).state;
+          bool ok = !isnan(v) && !isnan(p) && v > 0.7f && v < 5.3f;
+          if (!id(reflex_active)) {
+            bool trig = !ok || p >= th;
+            id(reflex_count) = trig ? id(reflex_count) + 1 : 0;
+            if (id(reflex_count) >= (ok ? 3 : 5)) {
+              id(reflex_active) = true;
+              id(reflex_count) = 0;
+              if (ok) ESP_LOGW("guard", "REFLEX: %.1f psi >= %.1f - valves to the floor", p, th);
+              else    ESP_LOGW("guard", "REFLEX: transducer fault (%.2f V) - valves to the floor", v);
+              id(guard_apply).execute();
+            }
+          } else {
+            bool clear = ok && p < th - 2.0f;
+            id(reflex_count) = clear ? id(reflex_count) + 1 : 0;
+            if (id(reflex_count) >= 60) {
+              id(reflex_active) = false;
+              id(reflex_count) = 0;
+              ESP_LOGI("guard", "reflex cleared at %.1f psi (valves left where they are)", p);
+            }
+          }
+
+  - interval: 100ms
+    then:
+      - lambda: |-
+          if (id(v1_timing) != 0) {
+            id(v1_elapsed).publish_state((millis() - id(v1_t_start)) / 1000.0f);
+          }
+          if (id(v2_timing) != 0) {
+            id(v2_elapsed).publish_state((millis() - id(v2_t_start)) / 1000.0f);
+          }

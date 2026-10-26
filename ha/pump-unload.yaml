@@ -1,0 +1,84 @@
+# Pump Unload - DRAFT, NOT DEPLOYED (2026-10-04). See
+# NEW-PUMP-MONITOR-PLAN.md section 15.
+#
+# Press before stopping the pump by hand. Opens all four Field A solenoids
+# and both recycle valves so the pump is not stopped at ~60 psi (which
+# blows the suction line off in the pond). Then flip the starter.
+#
+# To deploy: paste the block below into /config/scripts.yaml on machone
+# (currently empty) and reload scripts. Needs the Field A solenoids wired -
+# until then it only opens the CVs, which does not lower the pressure.
+#
+# Before using: turn OFF the automations "Auto Close CV1" and "Irrigation
+# rotation - line swap detected". The unload takes pressure below 40, which
+# fires the swap automation, and that chain can close CV1.
+#
+# Measured 2026-10-09 with 4 lines + both CVs open: 25.0 psi, 5.9 kW (a
+# line alone is 4.44 kW). That is past the 5 HP limit, so the hold is short:
+# if the pump is still running after hold_s the script puts everything
+# back the way it was.
+
+pump_unload:
+  alias: Pump Unload
+  icon: mdi:pump-off
+  mode: single
+  variables:
+    hold_s: 60
+    lines:
+      - switch.pump_controller_field_a_line_1
+      - switch.pump_controller_field_a_line_2
+      - switch.pump_controller_field_a_line_3
+      - switch.pump_controller_field_a_line_4
+    were_off: >-
+      {{ lines | select('is_state', 'off') | list }}
+    cv1: "{{ state_attr('valve.pump_monitor_valve_1', 'current_position') | int(0) }}"
+    cv2: "{{ state_attr('valve.pump_monitor_valve_2', 'current_position') | int(0) }}"
+  sequence:
+    - condition: state
+      entity_id: binary_sensor.pump_monitor_pump_running
+      state: 'on'
+    - action: switch.turn_on
+      target:
+        entity_id: "{{ lines }}"
+    - action: valve.open_valve
+      target:
+        entity_id:
+          - valve.pump_monitor_valve_1
+          - valve.pump_monitor_valve_2
+    # Pump stopped = pressure gone. Pump Running has its own 5 s debounce,
+    # so read the pressure directly.
+    - wait_template: "{{ states('sensor.pump_monitor_pump_pressure') | float(99) < 10 }}"
+      timeout:
+        seconds: "{{ hold_s }}"
+      continue_on_timeout: true
+    - if:
+        - condition: template
+          value_template: "{{ wait.completed }}"
+      then:
+        # Stopped. Let the lines drain the pressure off, then release every
+        # solenoid; nothing is left energized and nothing restarts.
+        - delay: '00:00:30'
+        - action: switch.turn_off
+          target:
+            entity_id: "{{ lines }}"
+      else:
+        # Still running after hold_s: not stopped, so undo. Lines that were
+        # running before stay on.
+        - if:
+            - condition: template
+              value_template: "{{ were_off | length > 0 }}"
+          then:
+            - action: switch.turn_off
+              target:
+                entity_id: "{{ were_off }}"
+    # Either way the CVs go back to where they were.
+    - action: valve.set_valve_position
+      target:
+        entity_id: valve.pump_monitor_valve_1
+      data:
+        position: "{{ cv1 }}"
+    - action: valve.set_valve_position
+      target:
+        entity_id: valve.pump_monitor_valve_2
+      data:
+        position: "{{ cv2 }}"

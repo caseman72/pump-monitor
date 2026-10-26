@@ -408,9 +408,11 @@ switch:
     entity_category: config
 
   # ---- PID pressure control (see PID-PLAN.md) ----
-  # Master enable. ON = pid mode COOL (pressure above setpoint opens CV2);
-  # OFF = pid mode OFF -> output 0 -> CV2 closes (pulse 0). CV1 is never
-  # touched by the loop. Default OFF; remembered across reboots.
+  # Master enable. ON = pid mode COOL (pressure above setpoint opens CV2).
+  # OFF = hands off: the climate keeps writing 0 to its output every
+  # sample in mode OFF, so recycle_out ignores writes while this is OFF -
+  # CV2 stays where it is and can be driven by hand. CV1 is never touched
+  # by the loop. Default OFF; remembered across reboots.
   - platform: template
     name: "Pressure Control"
     id: pressure_control
@@ -1168,13 +1170,16 @@ text_sensor:
 # CV1 is not part of the loop: it is parked by hand (valve slider / Pulse
 # Target) at the ~5 GPM point and stays open as the pump's guaranteed flow
 # path, so CV2 seating is harmless. Identical repeat targets are skipped
-# so a steady output doesn't stack queued moves.
+# so a steady output doesn't stack queued moves. Writes are ignored while
+# Pressure Control is OFF (the climate writes 0 every sample in mode OFF,
+# which would pin CV2 shut and override any manual move).
 output:
   - platform: template
     type: float
     id: recycle_out
     write_action:
       - lambda: |-
+          if (!id(pressure_control).state) return;
           float pct = vm_clampf(state, 0.0f, 1.0f) * 100.0f;
           int p2 = (int) lroundf(pct / 100.0f * ${pid_max_pulse});
           if (p2 != id(v2_pulse_target)) {

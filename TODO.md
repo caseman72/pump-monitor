@@ -1007,6 +1007,25 @@ screenshot reading needed for future line runs.
 
 ## 5. Calibration & sensors
 
+- [x] ~~CV1 and CV2 do not match at the same pulse~~ **RESOLVED
+      2026-09-10.** At 25 % CV1 streamed ~3x as far as CV2 - but CV2 was
+      not at pulse 4: the pid climate writes its output every sample (0 in
+      mode OFF), so CV2 was being overridden by the loop, not sitting where
+      the slider said. With `recycle_out` ignoring writes while Pressure
+      Control is OFF, both valves at 25 % look identical at the pond. No
+      per-valve calibration needed; CV2's seat test stays a nice-to-have.
+- [ ] **Continuous pond level: EMIHO 240-33 Ω fuel sender, 11" (275 mm)**
+      (Casey, 2026-09-16, ~$28). Resistive float to ground: brown = signal,
+      blue = negative. Wire on pump-monitor **AI2 (GPIO1)**: 12 V supply
+      terminal → 330 Ω 1 W → AI2, brown on AI2, blue on the PLC GND
+      terminal (not pond earth). Reads 1.1 V (240 Ω) to 5.05 V (33 Ω),
+      33 mA max. US-standard senders are 240 Ω EMPTY / 33 Ω FULL - verify
+      with a meter by lifting the float. Not linear in volts: invert the
+      divider (R = 330·V/(12−V)) then map ohms → inches, then a two-point
+      calibrate_linear from a tape measure at float-down / float-up.
+      Measure the actual 12 V rail and use it as the constant (raw supply,
+      not regulated). 11" covers a slice of the pond - mount it on the
+      low-water band above the intake, inside a holed 2" PVC stilling tube.
 - [~] Pump power monitoring — **INSTALLED 2026-09-06: Shelly EM Gen3 50A
       + 2× Shelly 80A CTs** (ordered 08-31). HA sees motor load directly
       (native Shelly integration, local). Gives the staged controller a
@@ -1055,7 +1074,8 @@ screenshot reading needed for future line runs.
       - The Gen3's 2 A relay output is NOT for the pump loop — ICE REL5/6
         stays the only pump-off path (don't add machinery).
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
-- [ ] Measure Valve 2's Full Travel Time after install
+- [x] Measure Valve 2's Full Travel Time after install — 3.55 s, same as
+      Valve 1 (Casey, 2026-10-08)
 - [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
 - [ ] Confirm the valve flow table on the real pump (60 psi static, so the
       faucet numbers should transfer)
@@ -1064,6 +1084,11 @@ screenshot reading needed for future line runs.
       reading). Next pump-off: check both read 0.
 
 ## 6. Thermal relief valve — passive dead-head backstop (2026-08-25)
+
+> **DROPPED 2026-10-08 (Casey, after talking to the pump man):** the pump
+> has no port for a thermal relief valve, and 5 GPM through the recycle
+> valves keeps it cool. No relief valve, no copper line, no temperature
+> probe. Kept below as history. See NEW-PUMP-MONITOR-PLAN.md section 9.
 
 > **Why not a pressure relief valve.** This pump can't make dangerous
 > pressure: shutoff is ~65 psi against 150 psi pipe (2.3x margin).

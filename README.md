@@ -201,7 +201,7 @@ reachable-setpoint table and the tuning log are in
 [`PID-PLAN.md`](PID-PLAN.md).
 
 - **Pressure Setpoint** (psi, default 55) and **Pressure Control** (master
-  switch, default OFF — OFF closes CV2 to pulse 0; CV1 is never touched)
+  switch, default OFF — OFF is hands-off: CV2 stays put and can be driven by hand; CV1 is never touched)
 - **PID Autotune** / **PID Reset Integral** buttons; **PID Kp / Ki / Kd**
   numbers to try gains live (setting one pushes all three)
 - **Recycle Output** (0–100 %, the CV2 command = pulse / 16) and the loop
