@@ -1,5 +1,5 @@
-# Pump Unload - DRAFT, NOT DEPLOYED (2026-10-04). See
-# NEW-PUMP-MONITOR-PLAN.md section 15.
+# Pump Unload - drafted 2026-10-04, used for the 2026-10-09 stop. See
+# PLAN.md section 15.
 #
 # Press before stopping the pump by hand. Opens all four Field A solenoids
 # and both recycle valves so the pump is not stopped at ~60 psi (which

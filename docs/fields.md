@@ -62,10 +62,25 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 
 ## Field A — 4 zones (240 × 230 ft)
 
-Zones: **A1 = 6, A2 = 6, A3 = 6, A4 = 7** heads (order confirmed by Casey
-2026-08-31 — the numbering was swapped at some point, so notes from before
-then may use the old order, where the 7-head zone was A1); an optional
-**+2 per line** for the back yard. Separate from the C/D/E lines ("the other zones").
+**As built (underground PVC, Rain Bird Falcon heads, one solenoid per
+line on pump-controller REL3–REL6 since 2026-10-08):**
+
+| Line | Heads | Nozzle | Line GPM | From (PLAN.md section 7) |
+|---|---|---|---:|---|
+| A1 | 7 | #12 tan | 75 | 54.74 psi, CVs closed (10-04) |
+| A2 | 7 | #12 tan | 77 | 54.00 psi, CV1 at 25 % (10-04) |
+| A3 | 7 | #12 tan | 75 | = A1 within 0.1 psi (10-01) |
+| A4 | 8 | #10 grey | 75.5 | 54.24 psi, CV1 at 25 % (10-04) |
+
+With both CVs at 25 % every line runs 52.8–53.3 psi, 4.43–4.47 kW
+(2026-10-09). Cap a line at ~4 h (12 h flooded boxes 1 and 2, 2026-09-28).
+
+The pre-Falcon counts were **A1 = 6, A2 = 6, A3 = 6, A4 = 7** impact heads
+(order confirmed by Casey 2026-08-31 — the numbering was swapped at some
+point, so notes from before then may use the old order, where the 7-head
+zone was A1). The Field A planning notes further down predate the
+build. An optional **+2 per line** for the back yard.
+Separate from the C/D/E lines ("the other zones").
 
 **Geometry from the to-scale engineering drawing (read 2026-08-25):** the 4 lines span
 the 240 ft width at **~60 ft apart** (30 + 60 + 60 + 60 + 30 — the

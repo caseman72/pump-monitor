@@ -1,13 +1,55 @@
-# Pump Monitor v2 — plan
+# Pump Monitor v2 — plan, status and history
 
-Written 2026-10-04 from `NEW-PUMP-MONITOR.md` (the brain dump), the three
-node YAMLs, TODO/PID-PLAN/fields docs, and a read-only inventory of Home
-Assistant on machone. **Plan only: nothing is flashed, nothing in HA or the
-current YAMLs is changed.**
+The design document for pump-monitor. Written 2026-10-04 from
+`NEW-PUMP-MONITOR.md` (the brain dump), the three node YAMLs, the
+TODO/PID-PLAN/fields docs, and a read-only inventory of Home Assistant on
+machone. Sections 1–16 are the plan as written, with the 10-08/10-09
+results added. Section 0 says what is actually built; section 17 is the
+PID loop that v2 replaced (formerly `PID-PLAN.md`).
 
-Labels used below: **[measured]** = on record in TODO/PID-PLAN/memory,
+Labels used below: **[measured]** = on record in TODO/PID history/memory,
 **[reasoned]** = arithmetic from measured numbers, not yet observed,
 **[decide]** = Casey's call.
+
+## 0. Status (2026-10-25)
+
+**Flashed 2026-10-09 10:25 [measured]:** `pump-monitor.yaml` (then
+`pump-monitor-v2.yaml`) = the v1 firmware plus the guard only. Guard
+checks G1–G5 passed on water the same morning (section 16). Season over:
+pond drained, lines blown out.
+
+Built, on the node:
+
+- **`Guard`** switch (default ON, restored). ON holds both CVs at or above
+  pulse 4 (25 %, 2.3 GPM each) at one choke point, the pulse scripts. A
+  close from HA or Pulse − stops at the floor. OFF removes the floor and
+  moves nothing. The switch is set by hand: the automatic release from
+  manual-line toggles (section 4) is **not built**.
+- **Reflex**: pressure ≥ `Guard Reflex Pressure` (default 57 psi, 110 =
+  never) for 3 s, or the transducer dead for 5 s → floor forced with Guard
+  ON or OFF. Clears after 60 s of a good reading 2 psi under the threshold;
+  clearing moves nothing. `Guard Reflex` problem sensor shows it.
+- **`Recycle Flow`** (GPM to the pond from the valve positions, 0.0923 per
+  % per valve; 0 when the pump is stopped).
+- Removed from v1: the PID loop (17 entities) and `STOP All`.
+- Unchanged from v1: valve pulse positioning, ICE (relay **not wired**,
+  `ICE Bypass` default ON; `ICE High Trip` still exists at 58 psi although
+  section 9 retires it as a trip), Pump Running, diagnostics.
+
+Built, in HA (scripts in `ha/`, both run 2026-10-09): `Pump Unload`
+(section 15) and `Field A Test Cycle` (sections 14, 16). Plus
+`ha/field-a-dashboard-card.yaml`.
+
+Not built: sections 5–8 and 10–13 (Pump State, flow/totals, line table,
+faults, RTC, pump-controller schedule and hand-over, HA package), and the
+firmware version of Pump Unload.
+
+**Season start (valve position is dead-reckoned).** The counters survive
+a winter of no moves, but nothing confirms the balls are where the counter
+says. Re-home both valves before the first water: pump off, `Guard` OFF,
+close Valve 1 and Valve 2 (each drives onto the seat with the homing
+margin and resets its counter to 0), then `Guard` ON — both drive back up
+to pulse 4 (25 %). Then check the two jets into the pond by eye.
 
 ## 1. What is wrong with the system today
 
@@ -84,8 +126,8 @@ The loop existed to trim small sets down to 55 psi; the solenoid lines run
 ~54.5 on their own and the valves are meant to stay parked. Removed from
 v2: the pid climate, its output, setpoint, enable switch, gain numbers,
 autotune and the eight loop sensors (17 entities). The tuned gains (0.492
-/ 0.0683 / 0.886) and the tuning log stay in PID-PLAN.md and
-pump-monitor.yaml if it is ever wanted back.
+/ 0.0683 / 0.886) and the tuning log are in section 17; the v1
+firmware is `pump-monitor.yaml` on branch `pid` if it is ever wanted back.
 
 **The valves park at 25 % and stay there [decided 10-08].** Once every
 line is on solenoids (7 heads each, A4 with 8), the guard is never
@@ -460,10 +502,10 @@ If the unload does not happen (HA down, 24 VAC dead, solenoids stuck):
 underground there is no hand valve left to open before a stop. Steps 1–2
 and 4 as a button: press it, watch the pressure fall, flip the starter by
 hand. First version is an HA script using entities that already exist, so
-it needs no flash: drafted in `ha/pump-unload.yaml`, **not deployed, not
-tested**. It holds the lines open for 60 s (time to reach the switch) and
-puts everything back if the pump is still running. It does nothing useful
-until the solenoids are wired. It moves into pump-monitor firmware with
+it needs no flash: `ha/pump-unload.yaml`, drafted 10-04 and **used for
+the season's last stop on 10-09** (results in section 16). It holds the
+lines open for 60 s (time to reach the switch) and puts everything back
+if the pump is still running. It moves into pump-monitor firmware with
 the rest of this section when the relay is wired.
 
 Not covered, and cannot be by this node: a power cut, the Furnas, the
@@ -481,7 +523,7 @@ collect the numbers the firmware will be built on over the winter:
 - `ha/pump-unload.yaml` — the unload button (section 15)
 - `ha/field-a-test.yaml` — the 3-1-3-2-4-1-4-2 cycle with the CVs at 25 %
 
-Both are drafts: not deployed, never run.
+Both were drafts the night before (not deployed, never run); both ran on 10-09.
 
 **Not flashing guard firmware tonight** — recommended. It would be new
 safety code on the pump node, unbenched, the night before the only test
@@ -574,11 +616,12 @@ All **[measured]**, both CVs at 25 %, v1 firmware.
 
 So pressure separates idle from a running A line by 5.5 psi and power by
 1.2 kW. `Guard Reflex Pressure` default changed 59 -> 57 in
-`pump-monitor-v2.yaml`.
+`pump-monitor-v2.yaml` (now `pump-monitor.yaml`).
 
 ### Flash and guard test (added 10-08, late)
 
-`pump-monitor-v2.yaml` = the current firmware plus the guard only: `Guard`
+`pump-monitor-v2.yaml` (now `pump-monitor.yaml`) = the current firmware
+plus the guard only: `Guard`
 switch (default ON, floor 25 % on both CVs at one choke point), the
 pressure reflex (`Guard Reflex Pressure`, default 57 psi, 110 = never),
 `Guard Reflex` problem sensor, and `Recycle Flow` (GPM from the valve
@@ -589,10 +632,10 @@ pump-controller is NOT reflashed: its relays were checked today and are
 needed for the blow-out. Everything else in sections 5–13 is logic that
 can be benched without water.
 
-    ./upload.sh pump-monitor-v2.yaml 172.24.1.174
+    ./upload.sh pump-monitor-v2.yaml 172.24.1.174   # as flashed; now ./upload.sh pump-monitor.yaml
 
 Flash with no Field A line switching and both CVs already at 25 %; the
-way back is `./upload.sh pump-monitor.yaml`.
+way back was `./upload.sh pump-monitor.yaml` (v1, now on branch `pid`).
 
 | # | Guard check | Pass |
 |---|---|---|
@@ -635,3 +678,50 @@ the settle wait before measured is compared with expected (60 s in
 section 8). Open guess: whether the valves close quicker (Casey) or
 slower (Claude) at the lower pressure. The pressure sensor averages ~4 s,
 so a dip shorter than ~5 s will read shallower than it was.
+
+## 17. PID history (v1, superseded by v2)
+
+Formerly `PID-PLAN.md`. The loop ran on branch `pid` (2026-08-27 →
+2026-10-09) and was removed in v2 because both CVs now park at 25 % and
+stay there (section 4). The code is still `pump-monitor.yaml` on branch
+`pid`.
+
+**What it was.** ESPHome `climate: pid` + `climate.pid.autotune`
+(built-in rather than hand-written, for anti-windup, derivative kick and
+sample timing), cooling only: pressure above the `Pressure Setpoint`
+(default 55 psi) opened CV2 through the pulse scripts. From 2026-09-10
+CV1 was parked by hand at the ~5 GPM point as the guaranteed flow path
+and CV2 was the loop's only actuator; output 100 % = pulse 10
+(`pid_max_pulse`), not 16. The climate was `internal` because HA converts
+climate °C → °F ("131 °F" for 55 psi).
+
+**Tuned gains [measured 2026-09-10]:** Kp 0.492, Ki 0.0683, Kd 0.886.
+Autotune on 12 heads with CV1 closed (natural 55.6 psi, floor 54.1 with
+CV2 = 16), 15:40:44–15:41:19, 35 s, three 0↔16 swings. Then held
+55.0–55.2 at pulse 6–7, output 40 %. Setpoint steps 54 / 54.5 / 55 / 55.5:
+54 saturated cleanly (CV2 16, floor 54.1); no overshoot or hunting.
+
+What it taught, still relevant:
+
+- **Setpoint must be reachable.** Autotune is a relay test and needs
+  pressure to cross the setpoint both ways; between "natural" and "both
+  CVs open". Estimated floors: 12 heads 55.8 → ~52.9, 14 heads 55.5 →
+  ~51, 7 heads 59.3 → ~56.8. 50 psi on 7 heads was unreachable.
+- **Deadband and windup.** The first deadband (+0.5 / −1.0 psi) kept P and
+  D off while the I-term wound into the pulse 9–16 plateau, so recovery
+  from a saturated step took minutes. Fixed with deadband +0.2 / −0.3 and
+  the pulse-10 cap. Pulses 1–8 carry essentially all the flow (README flow
+  table).
+- **Dead-reckoning bug (fixed, still in v2).** The queued pulse script
+  stamped the counter with the *latest* target instead of the one it
+  drove to; the loop queued targets faster than a 3 s close, and the
+  counter read 10 with the ball near 3. Fix: latch the target when the run
+  starts (`vN_pulse_run`). Resync = command close (0).
+- **"CV1 and CV2 don't match" was the loop [measured 2026-09-10].** The
+  climate writes its output every sample, 0 in mode OFF, so CV2 was being
+  pinned shut, not sitting at the slider's pulse. With writes ignored while
+  `Pressure Control` was OFF, both valves at 25 % looked identical at the
+  pond. No per-valve calibration needed.
+- **The loop does not notice a break.** A broken riser (−9 psi,
+  2026-08-27) pushes pressure below setpoint, so the loop just closes CV2.
+  Break detection is the expected-vs-measured residual (section 8).

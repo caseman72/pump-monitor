@@ -3,6 +3,11 @@
 Working list for the Pump Monitor node. Numbers below are first guesses —
 revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 
+> **v2 (flashed 2026-10-09):** the design, current status and roadmap are
+> in `PLAN.md`. This file is the working list and the measurement history;
+> older sections describe designs v2 replaced (the PID loop, the staged
+> response, the thermal relief valve).
+
 ## Definitions
 
 - **BEP — Best Efficiency Point**: the flow rate on a pump's H-Q curve where
@@ -69,12 +74,10 @@ it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
 
-> **PID controller — IN PROGRESS 2026-08-27, branch `pid`, see
-> `PID-PLAN.md`.** ESPHome `climate: pid` + autotune driving CV2 through
-> the pulse primitive (CV1 parked open at ~5 GPM by hand, 2026-09-10);
-> setpoint is an HA number (default 55).
-> Tuning runs on the 12/14-head lines first (SP must be reachable — 50 on
-> 7 heads is not, floor ~57). Not flashed yet.
+> **PID controller — REMOVED in v2 (2026-10-08).** Was ESPHome
+> `climate: pid` + autotune driving CV2 (branch `pid`, tuned 2026-09-10:
+> Kp 0.492 / Ki 0.0683 / Kd 0.886). Replaced by the minimum-flow guard:
+> both CVs parked at 25 %. History in `PLAN.md` section 17.
 
 > **SMALLEST ZONE IS 12 HEADS, NOT 6 (Casey, 2026-08-25).** Field A lines
 > 2-4 are 6 heads each, but a lone 6-head line is a waste for a 5 HP pump
@@ -969,6 +972,10 @@ screenshot reading needed for future line runs.
 
 ## 3. Recycle failsafe (when zones are automated)
 
+> **Covered by the v2 guard (2026-10-09):** both CVs held at 25 % on the
+> node itself, plus the pressure / transducer-fault reflex — no HA or
+> Wi-Fi needed (README "Minimum-flow guard").
+
 - [ ] If the HA/API connection is lost for N minutes, open Valve 1 to
       ~10–15% so the 5 HP pump always has a flow path. Firmware-side,
       disabled by default. Not needed while the long irrigation lines run
@@ -1088,7 +1095,7 @@ screenshot reading needed for future line runs.
 > **DROPPED 2026-10-08 (Casey, after talking to the pump man):** the pump
 > has no port for a thermal relief valve, and 5 GPM through the recycle
 > valves keeps it cool. No relief valve, no copper line, no temperature
-> probe. Kept below as history. See NEW-PUMP-MONITOR-PLAN.md section 9.
+> probe. Kept below as history. See PLAN.md section 9.
 
 > **Why not a pressure relief valve.** This pump can't make dangerous
 > pressure: shutoff is ~65 psi against 150 psi pipe (2.3x margin).
