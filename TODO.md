@@ -953,6 +953,9 @@ screenshot reading needed for future line runs.
       impeller, 3500 RPM) with
       ~11 ft flooded suction (+5 psi at the gauge): shutoff ~70 psi, BEP
       ~57 psi @ 100 GPM, 5 HP limit ~46 psi @ 150 GPM. High Trip **65 psi**
+      _(Superseded: suction is ~1 ft, +0.4 psi (2026-08-24); measured curve
+      61.3 − 0.001165·Q², dead head peaks ~58–61 psi, never 65/70. High Trip
+      is 58 since 2026-08-26.)_
       (80 was above shutoff and could never fire; 60 crowded the BEP). Starter is HAND–OFF–AUTO: start in HAND,
       flip to AUTO at pressure. Alerts latch until ICE Reset.
 - [x] **Capacitor RESOLVED 2026-08-24 with meter measurements.** Bad
