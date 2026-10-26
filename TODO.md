@@ -361,7 +361,7 @@ Zones (on `Pump Pressure`):
 | **Green** | ~48–62 psi at the gauge (BEP = best efficiency point, ≈ 57; below ~46 the 5 HP motor is at full load — overload territory; above ~62 flow is dropping toward dead-head at ~70) | nothing |
 | **Yellow** | > ~62 psi (or < ~48) | Valve 1 opens in steps (Pulse +) until pressure is back in band; when Valve 1 reaches 100%, Valve 2 starts opening the same way. Low side: pressure < ~48 means flow > ~140 GPM — motor near full load — so the response there is to CLOSE recycle, not open |
 | **Red** | > ~64 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
-| **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
+| **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat ICE High Trip, 58 psi since 2026-08-26 (was 65). NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
 
 Design notes:
 - **Recycle is PROPORTIONAL, not all-or-none** (Casey, 2026-08-24): the
@@ -526,7 +526,8 @@ Design notes:
       it directly (predict ~60.0 psi).
 
       **Consequences:**
-      - [ ] **ICE High Trip (65 psi) is UNREACHABLE** — the pump can't make
+      - [x] **ICE High Trip (65 psi) is UNREACHABLE** (resolved: 58 psi,
+        Casey 2026-08-26) — the pump can't make
         65, so the alert can never fire. Same failure as the old 80 psi
         setting, repeated. It's alert-only (relay not wired) so nothing is
         unsafe, but it should be lowered (~59-60) or the approach rethought
