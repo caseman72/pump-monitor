@@ -197,10 +197,9 @@ mechanical seat is further (seat-zero, pulse 0).
     reboot, swap a valve). Default; remembered across reboots.
   - **OFF = automation armed**: the relay is a debounced comparator with
     hysteresis, like the Furnas itself — **closed while Low Trip < pressure
-    < High Trip**, open otherwise. 3 s at/above High Trip (firmware
-    default 58 psi; the value is restored on the node, so HA shows what
-    is in force — it was set to 65 in August, 5 psi below the ~70 psi
-    dead-head the pump curve gave at the time) opens it — the ICE is the pump's **only high-pressure protection**: the
+    < High Trip**, open otherwise. 3 s at/above High Trip (**58 psi**,
+    decided 2026-08-26; was 65, which the pump can't reach) opens it —
+    the ICE is the pump's **only high-pressure protection**: the
     Furnas only does low, and a dead-headed centrifugal pump draws *less*
     current, so the thermal overloads never see it. High Trip must sit
     below the pump's shutoff head; Low Trip defaults to

@@ -962,8 +962,8 @@ screenshot reading needed for future line runs.
       the bad 18.3 µF cap kept for reference only.
 - [~] ICE High Trip is now an ALERT threshold only (relay not wired — see
       the decision at the top of section 1), so its exact value is no longer
-      safety-critical. Left at 65 psi as a "pressure is unusually high"
-      notification. (If it's ever wired in future, first measure true
+      safety-critical. **58 psi** (decided 2026-08-26, see section 1; was 65)
+      as a "pressure is unusually high" notification. (If it's ever wired in future, first measure true
       dead-head: close the main valve slowly, watch peak pressure, set the
       trip a few psi below — because with the corrected +0.4 psi geometry,
       published dead-head at the gauge ≈ 65, so 65 has no margin.)

@@ -632,8 +632,8 @@ number:
   # overloads never see it. Goulds 3656 1-1/2x2-6, 5-15/16" impeller,
   # 3500 RPM, with ~11 ft of FLOODED suction from the pond (+~5 psi at the
   # gauge): shutoff ~70 psi at the gauge, BEP ~57 psi @ 100 GPM, 5 HP limit
-  # ~46 psi @ 150 GPM. High Trip 65 psi: above BEP with margin for the
-  # future controller, 5 psi below dead-head.
+  # ~46 psi @ 150 GPM. High Trip 58 psi (Casey, 2026-08-26; was 65, which
+  # the pump could never reach - the fitted shutoff is ~61.3 psi).
   # Low Trip defaults to 0 = DISABLED: the ICE is the HIGH-pressure guard;
   # low pressure is the Furnas's job (20 psi) with the starter's thermal
   # overloads behind it - no second device arguing about low pressure.
