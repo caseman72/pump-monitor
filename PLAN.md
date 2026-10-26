@@ -1,7 +1,7 @@
 # Pump Monitor v2 — plan, status and history
 
 The design document for pump-monitor. Written 2026-10-04 from
-`NEW-PUMP-MONITOR.md` (the brain dump), the three node YAMLs, the
+`PUMP-MONITOR.md` (the brain dump), the three node YAMLs, the
 TODO/PID-PLAN/fields docs, and a read-only inventory of Home Assistant on
 machone. Sections 1–16 are the plan as written, with the 10-08/10-09
 results added. Section 0 says what is actually built; section 17 is the

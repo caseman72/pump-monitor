@@ -342,7 +342,7 @@ the Field A schedule and hand-over) is in [PLAN.md](PLAN.md) section 12.
 - `upload.sh` / `secrets.example.h` — secret-free build workflow
 - `PLAN.md` — the v2 design: guard, ICE policy, unload, roadmap, the
   2026-10-09 test results, and the PID history
-- `NEW-PUMP-MONITOR.md` — Casey's 2026-10-04 brain dump that PLAN.md was
+- `PUMP-MONITOR.md` — Casey's 2026-10-04 brain dump that PLAN.md was
   written from (goals, the HA helpers and automations as they were)
 - `docs/sprinkler-component-notes.md` — ESPHome sprinkler component reference for the lawn/zone node
 - `docs/fields.md` — irrigation field layout and head counts per line/zone
