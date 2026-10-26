@@ -630,9 +630,10 @@ number:
   # The ICE is the ONLY high-pressure protection: the Furnas only does low,
   # and a dead-headed centrifugal pump draws LESS current so the thermal
   # overloads never see it. Goulds 3656 1-1/2x2-6, 5-15/16" impeller,
-  # 3500 RPM, with ~11 ft of FLOODED suction from the pond (+~5 psi at the
-  # gauge): shutoff ~70 psi at the gauge, BEP ~57 psi @ 100 GPM, 5 HP limit
-  # ~46 psi @ 150 GPM. High Trip 58 psi (Casey, 2026-08-26; was 65, which
+  # 3500 RPM; the pump sits ~1 ft below the pond surface (pickup is 10 ft
+  # down, which adds no head), so suction adds only ~0.4 psi at the gauge:
+  # published shutoff ~65 psi at the gauge, BEP ~52 psi @ 100 GPM, 5 HP limit
+  # ~41 psi @ 150 GPM. High Trip 58 psi (Casey, 2026-08-26; was 65, which
   # the pump could never reach - the fitted shutoff is ~61.3 psi).
   # Low Trip defaults to 0 = DISABLED: the ICE is the HIGH-pressure guard;
   # low pressure is the Furnas's job (20 psi) with the starter's thermal
