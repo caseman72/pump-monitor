@@ -1,0 +1,244 @@
+type: grid
+cards:
+  - type: heading
+    heading: Field A
+    heading_style: title
+    icon: mdi:align-vertical-center
+  - type: custom:bubble-card
+    color_type: card
+    card_type: button
+    entity: switch.pump_controller_field_a_line_1
+    button_type: switch
+    sub_button:
+      main: []
+      bottom: []
+    show_icon: true
+    styles: >-
+      .bubble-icon {
+        animation: ${hass.states[this.config.entity].state === 'on' ? 'slow-rotate 2s linear infinite' : ''};
+      }
+
+      @keyframes slow-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--blue-color)'
+            : 'inherit'
+        }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines_next']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--orange-color)'
+            : 'inherit'
+        }
+      }
+
+      ${window.$bc = {
+          name: '',
+          entity: '',
+          setName: function(entity) { this.entity = entity, this.name = hass.states[entity].attributes.friendly_name.replace(/^Pump Controller /, ""); },
+          getLine: function() { return this.name.replace(/^Field [A-E]\s/, '').replace(/$/, ': ') },
+          getLineEntity: function() { return (this.name.replace(/^Field ([A-E]) Line ([1-4])$/, 'input_number.field_$1_line_$2_heads').toLowerCase()) },
+          getLineHeads: function() { return hass.states[this.getLineEntity()].state.replace(/(\.0)?$/, ' heads') },
+          getZone: function() { return this.name.replace(/ Solenoid$/, ': ') },
+          getZoneEntity: function() { return this.entity.replace(/^switch\.(home|pump)_controller_(home|pump)_lawn_zone_(\d)$/, 'input_number.$1_lawn_zone_$3_heads') },
+          getZoneHeads: function() { return hass.states[this.getZoneEntity()].state.replace(/(\.0)?$/, ' heads')},
+          getRtcEntity: function() { return this.entity.replace(/^switch\.(home|pump)_controller_(home|pump)_lawn_zone_(\d)$/, 'sensor.$1_controller_rtc_zone_$3') },
+          getRtc: function() { return hass.formatEntityState(hass.states[this.getRtcEntity()]) },
+          lastChanged: function () { return new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'short', }).format(new Date(hass.states[this.entity].last_changed)) }
+        }
+      }
+
+      ${window.$bc.setName(this.config.entity)}
+      ${card.querySelector('.bubble-state').innerText = window.$bc.lastChanged()
+      } ${card.querySelector('.bubble-name').innerText =
+        window.$bc.getLine() + window.$bc.getLineHeads()
+      }
+    name: Line 1
+    icon: mdi:sprinkler-variant
+    button_action:
+      tap_action:
+        action: none
+    tap_action:
+      action: none
+    state_content: last_changed
+  - type: custom:bubble-card
+    color_type: card
+    card_type: button
+    entity: switch.pump_controller_field_a_line_2
+    button_type: switch
+    sub_button:
+      main: []
+      bottom: []
+    show_state: false
+    show_last_changed: true
+    show_icon: true
+    show_attribute: false
+    styles: >-
+      .bubble-icon {
+        animation: ${hass.states[this.config.entity].state === 'on' ? 'slow-rotate 2s linear infinite' : ''};
+      }
+
+      @keyframes slow-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--blue-color)'
+            : 'inherit'
+        }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines_next']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--orange-color)'
+            : 'inherit'
+        }
+      }
+
+      ${window.$bc.setName(this.config.entity)}
+      ${card.querySelector('.bubble-state').innerText = window.$bc.lastChanged()
+      } ${card.querySelector('.bubble-name').innerText =
+        window.$bc.getLine() + window.$bc.getLineHeads()
+      }
+    name: Line 2
+    icon: mdi:sprinkler-variant
+    button_action:
+      tap_action:
+        action: none
+    tap_action:
+      action: none
+  - type: custom:bubble-card
+    color_type: card
+    card_type: button
+    entity: switch.pump_controller_field_a_line_3
+    button_type: switch
+    sub_button:
+      main: []
+      bottom: []
+    show_state: false
+    show_last_changed: true
+    show_icon: true
+    show_attribute: false
+    styles: >-
+      .bubble-icon {
+        animation: ${hass.states[this.config.entity].state === 'on' ? 'slow-rotate 2s linear infinite' : ''};
+      }
+
+      @keyframes slow-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--blue-color)'
+            : 'inherit'
+        }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines_next']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--orange-color)'
+            : 'inherit'
+        }
+      }
+
+      ${window.$bc.setName(this.config.entity)}
+      ${card.querySelector('.bubble-state').innerText = window.$bc.lastChanged()
+      } ${card.querySelector('.bubble-name').innerText =
+        window.$bc.getLine() + window.$bc.getLineHeads()
+      }
+    name: Line 3
+    icon: mdi:sprinkler-variant
+    button_action:
+      tap_action:
+        action: none
+    tap_action:
+      action: none
+  - type: custom:bubble-card
+    color_type: card
+    card_type: button
+    entity: switch.pump_controller_field_a_line_4
+    button_type: switch
+    sub_button:
+      main: []
+      bottom: []
+    show_state: false
+    show_last_changed: true
+    show_icon: true
+    show_attribute: false
+    styles: >-
+      .bubble-icon {
+        animation: ${hass.states[this.config.entity].state === 'on' ? 'slow-rotate 2s linear infinite' : ''};
+      }
+
+      @keyframes slow-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--blue-color)'
+            : 'inherit'
+        }
+      }
+
+      .bubble-main-icon-container {
+        border: 1px solid ${
+          (hass.states['sensor.pump_monitor_irrigation_lines_next']?.state || '')
+            .split(',')
+            .map(s => s.trim())
+            .includes(entity) && hass.states[this.config.entity].state === "off"
+            ? 'var(--orange-color)'
+            : 'inherit'
+        }
+      }
+
+      ${window.$bc.setName(this.config.entity)}
+      ${card.querySelector('.bubble-state').innerText = window.$bc.lastChanged()
+      } ${card.querySelector('.bubble-name').innerText =
+        window.$bc.getLine() + window.$bc.getLineHeads()
+      }
+    name: Line 4
+    icon: mdi:sprinkler-variant
+    button_action:
+      tap_action:
+        action: none
+    tap_action:
+      action: none

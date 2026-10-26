@@ -62,10 +62,25 @@ Rotation today: 3 → 1 → 4 → 2, one line at a time, changed once a day
 
 ## Field A — 4 zones (240 × 230 ft)
 
-Zones: **A1 = 6, A2 = 6, A3 = 6, A4 = 7** heads (order confirmed by Casey
-2026-08-31 — the numbering was swapped at some point, so notes from before
-then may use the old order, where the 7-head zone was A1); an optional
-**+2 per line** for the back yard. Separate from the C/D/E lines ("the other zones").
+**As built (underground PVC, Rain Bird Falcon heads, one solenoid per
+line on pump-controller REL3–REL6 since 2026-10-08):**
+
+| Line | Heads | Nozzle | Line GPM | From (PLAN.md section 7) |
+|---|---|---|---:|---|
+| A1 | 7 | #12 tan | 75 | 54.74 psi, CVs closed (10-04) |
+| A2 | 7 | #12 tan | 77 | 54.00 psi, CV1 at 25 % (10-04) |
+| A3 | 7 | #12 tan | 75 | = A1 within 0.1 psi (10-01) |
+| A4 | 8 | #10 grey | 75.5 | 54.24 psi, CV1 at 25 % (10-04) |
+
+With both CVs at 25 % every line runs 52.8–53.3 psi, 4.43–4.47 kW
+(2026-10-09). Cap a line at ~4 h (12 h flooded boxes 1 and 2, 2026-09-28).
+
+The pre-Falcon counts were **A1 = 6, A2 = 6, A3 = 6, A4 = 7** impact heads
+(order confirmed by Casey 2026-08-31 — the numbering was swapped at some
+point, so notes from before then may use the old order, where the 7-head
+zone was A1). The Field A planning notes further down predate the
+build. An optional **+2 per line** for the back yard.
+Separate from the C/D/E lines ("the other zones").
 
 **Geometry from the to-scale engineering drawing (read 2026-08-25):** the 4 lines span
 the 240 ft width at **~60 ft apart** (30 + 60 + 60 + 60 + 30 — the
@@ -290,6 +305,25 @@ vacations etc. They also produce the before/after data for the C-E grant.
     5 HP limit (~150). "Two lines at once" was an impact-head idea.
   - **Measure the real radius** of one #12 head at running pressure before
     committing the grid (46 ft → ~30 heads, not 25).
+- **Falcon ↔ impact equivalence (catalog, 2026-09-24).** Rain Bird Falcon
+  6504 nozzle table: **#12 (beige/tan)** = 9.7 GPM @ 40 psi, **11.0 @ 50**,
+  12.2 @ 60 (radius 53/55/57 ft); #10 (gray) = 8.1 / 9.1 / 10.0; #14
+  (light green) = 11.3 / 12.7 / 14.0. Against the psi model's 4.7 GPM per
+  5/32" impact head: **one tan Falcon ≈ 2.3 impact heads; 7 tan Falcons ≈
+  77 GPM ≈ 16-16.5 effective heads** → predicted pump ≈ 52.5-53 psi
+  (y = 60.2 − 0.02794x²), nozzle ≈ 50 psi after ~2 psi of mainline loss
+  (self-consistent). The "#12 × 7 ≈ 72 GPM" below used ~10.3 GPM/head;
+  the catalog says 11.0 at 50 psi, so ~77. Source: rainbird.com Falcon
+  6504 performance chart (D42381).
+  **MEASURED 2026-09-24: 7 tan Falcons = 54.6 psi at the gauge** → 14.2
+  effective heads. Zone GPM depends on which fit you believe: the pump
+  curve H = 61.3 − 0.001165·Q² says **75 GPM (10.7/head, 97 % of
+  catalog)**; the heads fit (4.7 GPM/head baked in, = 60.2 − 0.001265·Q²)
+  says 67 GPM (9.5/head, 86 %). The two fits disagree by ~10 GPM here;
+  the Falcons are roughly on catalog either way. **Use 14 effective heads
+  for a 7-tan-Falcon zone** - that is pressure-defined and fit-independent.
+  Cross-checks: #12 radius (55 ft @ 50 psi, 53 @ 40); Shelly kW vs the
+  18-head lines.
 - **⚠️ Falcons flow MORE per head than the current 5/32" impacts.** The
   whole pressure/zone model in TODO.md (heads → GPM → pump psi, the
   12-head floor) is built on ~4.7 GPM/head. A Rain Bird Falcon 6504 runs

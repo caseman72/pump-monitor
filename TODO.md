@@ -3,6 +3,11 @@
 Working list for the Pump Monitor node. Numbers below are first guesses —
 revisit after the ~2-week pressure-monitoring period (Aug/Sep 2026).
 
+> **v2 (flashed 2026-10-09):** the design, current status and roadmap are
+> in `PLAN.md`. This file is the working list and the measurement history;
+> older sections describe designs v2 replaced (the PID loop, the staged
+> response, the thermal relief valve).
+
 ## Definitions
 
 - **BEP — Best Efficiency Point**: the flow rate on a pump's H-Q curve where
@@ -68,6 +73,11 @@ Only after the recycle system is proven flawless in this bounded test does
 it earn the right to run Field A's automated zones un-manned.
 
 ## 1. Staged pressure response (the real control system) — NOT YET
+
+> **PID controller — REMOVED in v2 (2026-10-08).** Was ESPHome
+> `climate: pid` + autotune driving CV2 (branch `pid`, tuned 2026-09-10:
+> Kp 0.492 / Ki 0.0683 / Kd 0.886). Replaced by the minimum-flow guard:
+> both CVs parked at 25 %. History in `PLAN.md` section 17.
 
 > **SMALLEST ZONE IS 12 HEADS, NOT 6 (Casey, 2026-08-25).** Field A lines
 > 2-4 are 6 heads each, but a lone 6-head line is a waste for a 5 HP pump
@@ -242,6 +252,18 @@ it earn the right to run Field A's automated zones un-manned.
 > Applies to the automated (solenoid) zones on the sprinkler node; the
 > manual aluminum lines can only be alarmed on, not maneuvered.
 >
+> **First real break signature (2026-08-27 22:24:36):** one Rainbird
+> riser unscrewed itself on the running line → pressure stepped 53.3 →
+> 44.3 psi in ONE sample (−9 psi, then dead steady at 44.3 for 40+ min).
+> Nothing commanded on any node; both CVs seated; ICE silent (high side
+> only). A bare 3/4" riser at ~45 psi passes ~40 GPM ≈ 8 heads' worth —
+> matches the +38 GPM the curve implies. So the "broken pipe / burst" row
+> above has a threshold: **a step of ≥ 5 psi below the running plateau
+> within ~10 s with no commanded change** — 20× sensor noise, and a lawn
+> zone (−4.4 max, always commanded) can't trigger it. Step, not ramp;
+> stable afterward. The PID loop will NOT see this (pressure drops below
+> SP → recycle to floor) — the residual alarm is the only detector.
+>
 > This dissolves the 58-vs-60 ambiguity: 60 is fine when nothing SHOULD be
 > running and a fault when something should. The sprinkler node knows
 > what's commanded; pump-monitor knows pressure; HA joins them. (ICE at 58
@@ -339,7 +361,7 @@ Zones (on `Pump Pressure`):
 | **Green** | ~48–62 psi at the gauge (BEP = best efficiency point, ≈ 57; below ~46 the 5 HP motor is at full load — overload territory; above ~62 flow is dropping toward dead-head at ~70) | nothing |
 | **Yellow** | > ~62 psi (or < ~48) | Valve 1 opens in steps (Pulse +) until pressure is back in band; when Valve 1 reaches 100%, Valve 2 starts opening the same way. Low side: pressure < ~48 means flow > ~140 GPM — motor near full load — so the response there is to CLOSE recycle, not open |
 | **Red** | > ~64 psi with **both** valves at 100% | hold and wait — ~1 min — for the recycle path to bring it down |
-| **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat 65 psi ICE High Trip is live today. NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
+| **DEFCON 1** | at/near dead-head (~66+ psi at the gauge), both valves 100%, sustained | cut power to the pump (ICE trip, latched). Interim: the flat ICE High Trip, 58 psi since 2026-08-26 (was 65). NB: the pump physically cannot exceed ~70 psi at the gauge, so 80 was unreachable |
 
 Design notes:
 - **Recycle is PROPORTIONAL, not all-or-none** (Casey, 2026-08-24): the
@@ -504,7 +526,8 @@ Design notes:
       it directly (predict ~60.0 psi).
 
       **Consequences:**
-      - [ ] **ICE High Trip (65 psi) is UNREACHABLE** — the pump can't make
+      - [x] **ICE High Trip (65 psi) is UNREACHABLE** (resolved: 58 psi,
+        Casey 2026-08-26) — the pump can't make
         65, so the alert can never fire. Same failure as the old 80 psi
         setting, repeated. It's alert-only (relay not wired) so nothing is
         unsafe, but it should be lowered (~59-60) or the approach rethought
@@ -940,8 +963,8 @@ screenshot reading needed for future line runs.
       the bad 18.3 µF cap kept for reference only.
 - [~] ICE High Trip is now an ALERT threshold only (relay not wired — see
       the decision at the top of section 1), so its exact value is no longer
-      safety-critical. Left at 65 psi as a "pressure is unusually high"
-      notification. (If it's ever wired in future, first measure true
+      safety-critical. **58 psi** (decided 2026-08-26, see section 1; was 65)
+      as a "pressure is unusually high" notification. (If it's ever wired in future, first measure true
       dead-head: close the main valve slowly, watch peak pressure, set the
       trip a few psi below — because with the corrected +0.4 psi geometry,
       published dead-head at the gauge ≈ 65, so 65 has no margin.)
@@ -949,6 +972,10 @@ screenshot reading needed for future line runs.
       relay released) with the module not yet in the pump loop.
 
 ## 3. Recycle failsafe (when zones are automated)
+
+> **Covered by the v2 guard (2026-10-09):** both CVs held at 25 % on the
+> node itself, plus the pressure / transducer-fault reflex — no HA or
+> Wi-Fi needed (README "Minimum-flow guard").
 
 - [ ] If the HA/API connection is lost for N minutes, open Valve 1 to
       ~10–15% so the 5 HP pump always has a flow path. Firmware-side,
@@ -988,10 +1015,48 @@ screenshot reading needed for future line runs.
 
 ## 5. Calibration & sensors
 
-- [~] Pump power monitoring — **ORDERED 2026-08-31: Shelly EM Gen3 50A
-      + 2× Shelly 80A CTs.** HA sees motor load directly (native Shelly
-      integration, local). Gives the staged controller a real motor-load
-      floor instead of inferring it from pressure.
+- [x] ~~CV1 and CV2 do not match at the same pulse~~ **RESOLVED
+      2026-09-10.** At 25 % CV1 streamed ~3x as far as CV2 - but CV2 was
+      not at pulse 4: the pid climate writes its output every sample (0 in
+      mode OFF), so CV2 was being overridden by the loop, not sitting where
+      the slider said. With `recycle_out` ignoring writes while Pressure
+      Control is OFF, both valves at 25 % look identical at the pond. No
+      per-valve calibration needed; CV2's seat test stays a nice-to-have.
+- [ ] **Continuous pond level: EMIHO 240-33 Ω fuel sender, 11" (275 mm)**
+      (Casey, 2026-09-16, ~$28). Resistive float to ground: brown = signal,
+      blue = negative. Wire on pump-monitor **AI2 (GPIO1)**: 12 V supply
+      terminal → 330 Ω 1 W → AI2, brown on AI2, blue on the PLC GND
+      terminal (not pond earth). Reads 1.1 V (240 Ω) to 5.05 V (33 Ω),
+      33 mA max. US-standard senders are 240 Ω EMPTY / 33 Ω FULL - verify
+      with a meter by lifting the float. Not linear in volts: invert the
+      divider (R = 330·V/(12−V)) then map ohms → inches, then a two-point
+      calibrate_linear from a tape measure at float-down / float-up.
+      Measure the actual 12 V rail and use it as the constant (raw supply,
+      not regulated). 11" covers a slice of the pond - mount it on the
+      low-water band above the intake, inside a holed 2" PVC stilling tube.
+- [~] Pump power monitoring — **INSTALLED 2026-09-06: Shelly EM Gen3 50A
+      + 2× Shelly 80A CTs** (ordered 08-31). HA sees motor load directly
+      (native Shelly integration, local). Gives the staged controller a
+      real motor-load floor instead of inferring it from pressure.
+      - **⚠️ Raw Shelly readings are 1.5× HIGH — correct in HA, not the
+        app.** The Gen3 50A firmware only offers a 50A CT type; the 80A
+        CTs (needed to get two legs) put out more signal per amp than the
+        50A clamp it expects. Wired as planned (L1→N power, 120.5 V, one
+        80A CT per leg) — legs match to 0.1 %, PF 0.93 = nameplate, so the
+        wiring/phase reference is right; only the magnitude is off. Raw
+        32.3-32.5 A / 3,644 W per leg vs three independent sources at
+        ~20-21 A: the electrician's clamp when the leads went to 10 AWG,
+        the 2024 Sense plateaus (4.4-4.8 kW), and the pump curve. Ratio
+        1.5 = 32.3/21.5 (line-4 Sense 4.81 kW). **Correction factor =
+        50/80 on current, power, VA, and energy** (voltage and PF are
+        unaffected). Corrected: **20.2 A, 4,517 W** on an 18-head line ≈
+        88 % of the 4.9 kW nameplate. HA templates `Pump Amps` (leg 1 ×
+        50/80 — one current through both legs, never sum), `Pump Power`
+        and `Pump Energy` (A + B, × 50/80); feed the Schedule F utility
+        meters from these, never the raw entities. Side effect: the input
+        clips at ~33 A true instead of 50, so start inrush flat-tops —
+        harmless for monitoring. Factor is inferred from the cross-checks;
+        one clamp-meter reading beside the Shelly's would make it exact.
       - Wiring (240 V single-phase pump, US split-phase): power the EM
         from **L1→N (120 V)**, one 80A CT per leg (ch A = L1, ch B = L2),
         CT arrows toward the load. Each channel reads I×120 V, **A + B =
@@ -1017,7 +1082,8 @@ screenshot reading needed for future line runs.
       - The Gen3's 2 A relay output is NOT for the pump loop — ICE REL5/6
         stays the only pump-off path (don't add machinery).
 - [ ] DS18B20 temperature (like revel-monitor) — `one_wire` on a spare GPIO
-- [ ] Measure Valve 2's Full Travel Time after install
+- [x] Measure Valve 2's Full Travel Time after install — 3.55 s, same as
+      Valve 1 (Casey, 2026-10-08)
 - [ ] Re-verify the 50–95% flow anchors with clean-blank bucket runs
 - [ ] Confirm the valve flow table on the real pump (60 psi static, so the
       faucet numbers should transfer)
@@ -1026,6 +1092,11 @@ screenshot reading needed for future line runs.
       reading). Next pump-off: check both read 0.
 
 ## 6. Thermal relief valve — passive dead-head backstop (2026-08-25)
+
+> **DROPPED 2026-10-08 (Casey, after talking to the pump man):** the pump
+> has no port for a thermal relief valve, and 5 GPM through the recycle
+> valves keeps it cool. No relief valve, no copper line, no temperature
+> probe. Kept below as history. See PLAN.md section 9.
 
 > **Why not a pressure relief valve.** This pump can't make dangerous
 > pressure: shutoff is ~65 psi against 150 psi pipe (2.3x margin).
